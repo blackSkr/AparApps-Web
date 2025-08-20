@@ -1,0 +1,199 @@
+@model AparAppsWebsite.Models.LokasiFormVM
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+  ViewData["Title"] = "Edit Lokasi";
+
+  var opsi = Model.PICOptions ?? new List<AparAppsWebsite.Models.PetugasOption>();
+  var selectItems = opsi.Select(p => new SelectListItem(
+  text: $"{p.EmployeeNama} ({p.BadgeNumber}) — {p.RoleNama}",
+  value: p.Id.ToString()
+  )).ToList();
+
+  // JSON array Id petugas yang sudah terdaftar di lokasi (untuk hindari duplikasi saat add-many)
+  var existingIdsJson = System.Text.Json.JsonSerializer.Serialize(Model.CurrentPetugas.Select(x => x.Id));
+}
+
+<partial name="~/Views/Shared/_Alerts.cshtml" />
+
+<h2 class="mb-3">Edit Lokasi</h2>
+
+<form asp-action="Edit" method="post">
+  @Html.AntiForgeryToken()
+  <input type="hidden" asp-for="Id" />
+
+  <div class="mb-3">
+    <label class="form-label">Nama</label>
+    <input asp-for="Nama" class="form-control" />
+    <span asp-validation-for="Nama" class="text-danger"></span>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Latitude</label>
+      <input asp-for="lat" type="number" step="any" class="form-control" />
+      <span asp-validation-for="lat" class="text-danger"></span>
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">Longitude</label>
+      <input asp-for="Longitude" type="number" step="any" class="form-control" />
+      <span asp-validation-for="Longitude" class="text-danger"></span>
+    </div>
+  </div>
+
+  <div class="mb-4">
+    <label class="form-label">PIC Utama (opsional)</label>
+    <select asp-for="PICPetugasId" class="form-select" asp-items="selectItems">
+      <option value="">-- Tanpa PIC --</option>
+    </select>
+    <span asp-validation-for="PICPetugasId" class="text-danger"></span>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary">Simpan Perubahan</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Batal</a>
+  </div>
+</form>
+
+<hr class="my-4" />
+
+<!-- DAFTAR PIC SAAT INI (STRONGLY-TYPED) -->
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="card-title mb-3">PIC di Lokasi</h5>
+    @if (!(Model.CurrentPetugas?.Any() ?? false))
+    {
+      <div class="text-muted">Belum ada petugas.</div>
+    }
+    else
+    {
+      <ul class="list-group">
+        @foreach (var p in Model.CurrentPetugas)
+        {
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <strong>@(p.Nama ?? "-")</strong>
+              <span class="text-muted">(@p.BadgeNumber) — @(p.Role ?? "-")</span>
+            </div>
+            <div class="d-flex gap-2">
+              <form asp-action="AddPetugas" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="lokasiId" value="@Model.Id" />
+                <input type="hidden" name="petugasId" value="@p.Id" />
+                <input type="hidden" name="asPIC" value="true" />
+                <button class="btn btn-outline-primary btn-sm" title="Jadikan PIC">Jadikan PIC</button>
+              </form>
+
+              <form asp-action="UnlinkPetugas" method="post" class="d-inline"
+                onsubmit="return confirm('Unlink petugas ini?');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="lokasiId" value="@Model.Id" />
+                <input type="hidden" name="petugasId" value="@p.Id" />
+                <button class="btn btn-outline-danger btn-sm">Hapus / Unlink</button>
+              </form>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</div>
+
+<!-- LIST BUILDER: TAMBAH PIC BARU (BATCH) -->
+<div class="card">
+  <div class="card-body">
+    <h5 class="card-title mb-3">Tambah PIC Tambahan</h5>
+
+    <div class="d-flex gap-2 align-items-end mb-3">
+      <div class="flex-grow-1">
+        <label class="form-label">Pilih Petugas</label>
+        <select id="ddl-new-pic" class="form-select">
+          <option value="">-- Pilih petugas --</option>
+          @foreach (var it in selectItems)
+          {
+            <option value="@it.Value">@it.Text</option>
+          }
+        </select>
+      </div>
+      <button type="button" id="btn-add-new" class="btn btn-outline-primary">Tambah ke Daftar</button>
+    </div>
+
+    <div id="hint-new-empty" class="text-muted">Belum ada di daftar.</div>
+    <ul id="list-new" class="list-group mb-3"></ul>
+
+    <form id="form-addmany" asp-action="AddManyPIC" method="post">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="lokasiId" value="@Model.Id" />
+      <div id="hidden-new-container"></div>
+      <button type="submit" class="btn btn-success btn-sm" disabled id="btn-submit-new">Tambah Semua</button>
+    </form>
+
+    <small class="text-muted d-block mt-2">Gunakan tombol “Tambah ke Daftar” untuk menumpuk beberapa petugas lalu klik
+      “Tambah Semua”.</small>
+  </div>
+</div>
+
+@section Scripts {
+  <partial name="_ValidationScriptsPartial" />
+  <script>
+    (function () {
+      const ddl = document.getElementById('ddl-new-pic');
+      const btnAdd = document.getElementById('btn-add-new');
+      const list = document.getElementById('list-new');
+      const hidden = document.getElementById('hidden-new-container');
+      const hint = document.getElementById('hint-new-empty');
+      const submitBtn = document.getElementById('btn-submit-new');
+
+      // ✅ Id yang SUDAH terdaftar di lokasi (dari server)
+      const existingIds = new Set(JSON.parse('@Html.Raw(existingIdsJson)'));
+
+      const state = new Map(); // id -> text
+
+      function refreshUI() {
+        hint.style.display = state.size ? 'none' : 'block';
+        submitBtn.disabled = state.size === 0;
+      }
+
+      function addItem(id, text) {
+        if (!id) return;
+        if (state.has(id)) return;
+        if (existingIds.has(parseInt(id))) return; // jangan duplikasi dengan yang sudah ada di lokasi
+
+        state.set(id, text);
+
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-center';
+        li.dataset.id = id;
+        li.innerHTML = `<span>${text}</span>
+                          <button type="button" class="btn btn-sm btn-outline-danger">Hapus</button>`;
+        li.querySelector('button').addEventListener('click', () => removeItem(id));
+        list.appendChild(li);
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'petugasIds';
+        input.value = id;
+        input.dataset.id = id;
+        hidden.appendChild(input);
+
+        refreshUI();
+      }
+
+      function removeItem(id) {
+        state.delete(id);
+        const li = list.querySelector(`li[data-id="${id}"]`);
+        if (li) li.remove();
+        const input = hidden.querySelector(`input[data-id="${id}"]`);
+        if (input) input.remove();
+        refreshUI();
+      }
+
+      btnAdd.addEventListener('click', () => {
+        const id = ddl.value;
+        const text = ddl.options[ddl.selectedIndex]?.text;
+        addItem(id, text);
+      });
+
+      refreshUI();
+    })();
+  </script>
+}

@@ -1,0 +1,29 @@
+@model AparAppsWebsite.Models.IntervalPetugas
+@{
+    ViewData["Title"] = "Detail Interval Petugas";
+}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="mb-0">Detail Interval Petugas</h3>
+        <div>
+            <a class="btn btn-warning btn-sm" href="@Url.Action("Edit", new { id = Model.Id })"><i
+                    class="fas fa-edit"></i> Edit</a>
+            <a class="btn btn-secondary btn-sm" href="@Url.Action("Index")"><i class="fas fa-list"></i> Kembali</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.Id</dd>
+
+            <dt class="col-sm-3">Nama Interval</dt>
+            <dd class="col-sm-9">@Model.NamaInterval</dd>
+
+            <dt class="col-sm-3">Bulan</dt>
+            <dd class="col-sm-9">@(Model.Bulan ?? 0)</dd>
+
+            <dt class="col-sm-3">Deskripsi</dt>
+            <dd class="col-sm-9">@Model.Deskripsi</dd>
+        </dl>
+    </div>
+</div>

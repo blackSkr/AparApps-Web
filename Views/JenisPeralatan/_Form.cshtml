@@ -1,0 +1,22 @@
+@model AparAppsWebsite.Models.JenisPeralatan
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<div class="row">wz
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="Nama" class="form-label">Nama Jenis Peralatan <span class="text-danger">*</span></label>
+            <input asp-for="Nama" class="form-control" placeholder="Contoh: APAR CO₂ 5kg" />
+            <span asp-validation-for="Nama" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label asp-for="IntervalPemeriksaanBulan" class="form-label">
+                Interval Pemeriksaan (Bulan) <span class="text-danger">*</span>
+            </label>
+            <input asp-for="IntervalPemeriksaanBulan" type="number" min="1" max="60" class="form-control" />
+            <span asp-validation-for="IntervalPemeriksaanBulan" class="text-danger"></span>
+            <small class="form-text text-muted">Rentang 1–60 bulan</small>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,22 @@
+@* Tampilkan pesan TempData *@
+@if (TempData["Success"] is string s && !string.IsNullOrWhiteSpace(s))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @s
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Error"] is string e && !string.IsNullOrWhiteSpace(e))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @e
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (ViewBag.Error is string ve && !string.IsNullOrWhiteSpace(ve))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @ve
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}

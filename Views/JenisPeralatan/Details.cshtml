@@ -1,0 +1,48 @@
+@model AparAppsWebsite.Models.JenisPeralatan
+@{
+    ViewData["Title"] = "Detail Jenis Peralatan";
+}
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title">Detail Jenis Peralatan</h3>
+            <div class="btn-group">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Hapus @Model.Nama ?')">
+                        <i class="fas fa-trash"></i> Hapus
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">ID</dt>
+                <dd class="col-sm-9">@Model.Id</dd>
+
+                <dt class="col-sm-3">Nama Jenis</dt>
+                <dd class="col-sm-9">@Model.Nama</dd>
+
+                <dt class="col-sm-3">Interval</dt>
+                <dd class="col-sm-9">
+                    <span class="badge bg-warning text-dark">@Model.IntervalPemeriksaanBulan bulan</span>
+                </dd>
+            </dl>
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                Jenis ini dipakai di modul <strong>Peralatan</strong> & <strong>Checklist</strong>.
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+            <a asp-action="Index" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,101 @@
+@* Views/Checklist/Edit.cshtml *@
+@model AparAppsWebsite.Models.Checklist
+
+@{
+    ViewData["Title"] = "Edit Checklist";
+}
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Edit Checklist</h3>
+                    <p class="text-muted mb-0">Jenis: <strong>@Model.JenisNama</strong></p>
+                </div>
+
+                <form asp-action="Edit" method="post">
+                    <div class="card-body">
+                        @if (ViewBag.Error != null)
+                        {
+                            <div class="alert alert-danger">
+                                @ViewBag.Error
+                            </div>
+                        }
+
+                        <input type="hidden" asp-for="Id" />
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label asp-for="JenisId" class="form-label">
+                                        Jenis Peralatan <span class="text-danger">*</span>
+                                    </label>
+                                    <select asp-for="JenisId" class="form-select">
+                                        <option value="">-- Pilih Jenis Peralatan --</option>
+                                        @if (ViewBag.JenisList != null)
+                                        {
+                                            @foreach (var jenis in ViewBag.JenisList as
+                                                                                    List<AparAppsWebsite.Models.DropdownItem>)
+                                            {
+                                                <option value="@jenis.Id" selected="@(jenis.Id == Model.JenisId)">@jenis.Nama
+                                                </option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="JenisId" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label asp-for="Pertanyaan" class="form-label">
+                                        Pertanyaan Checklist <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea asp-for="Pertanyaan" class="form-control" rows="4"></textarea>
+                                    <span asp-validation-for="Pertanyaan" class="text-danger"></span>
+                                    <small class="form-text text-muted">
+                                        Buat pertanyaan yang spesifik dan mudah dijawab (maksimal 500 karakter)
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>Perhatian:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Mengubah pertanyaan akan mempengaruhi checklist di mobile app</li>
+                                        <li>Pastikan pertanyaan tetap relevan dengan jenis peralatan</li>
+                                        <li>Pertimbangkan impact terhadap data historis pemeriksaan</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="@Url.Action("Index")" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Kembali
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

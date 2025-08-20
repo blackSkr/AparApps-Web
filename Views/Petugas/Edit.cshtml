@@ -1,0 +1,49 @@
+@model AparAppsWebsite.Models.PetugasEditVm
+@{
+    ViewData["Title"] = "Edit Petugas";
+}
+
+<partial name="~/Views/Shared/_Alerts.cshtml" />
+<h2 class="mb-3">Edit Petugas</h2>
+
+<form asp-action="Edit" method="post">
+    @Html.HiddenFor(m => m.Id)
+
+    <!-- Employee readonly: tidak ada EmployeeId di VM Edit -->
+    <div class="mb-3">
+        <label class="form-label">Employee</label>
+        <input class="form-control" value="@($"{Model.BadgeNumber} — {Model.EmployeeNama}")" readonly />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="RolePetugasId" class="form-label">Role</label>
+        <select asp-for="RolePetugasId" class="form-select">
+            <option value="">-- Pilih Role --</option>
+            @foreach (var r in (Model.Roles ?? new List<AparAppsWebsite.Models.RoleItem>()))
+            {
+                <option value="@r.Id" selected="@(Model.RolePetugasId == r.Id)">@r.Display</option>
+            }
+        </select>
+        <span asp-validation-for="RolePetugasId" class="text-danger"></span>
+    </div>
+
+    @* <div class="mb-3">
+        <label asp-for="LokasiId" class="form-label">Lokasi</label>
+        <select asp-for="LokasiId" class="form-select">
+            <option value="">-- (Kosong) --</option>
+            @foreach (var l in (Model.Lokasi ?? new List<AparAppsWebsite.Models.LokasiItem>()))
+            {
+                <option value="@l.Id" selected="@(Model.LokasiId == l.Id)">@l.Nama</option>
+            }
+        </select>
+    </div> *@
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary">Simpan</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Batal</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

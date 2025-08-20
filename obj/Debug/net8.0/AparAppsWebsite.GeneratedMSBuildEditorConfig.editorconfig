@@ -1,0 +1,239 @@
+is_global = true
+build_property.TargetFramework = net8.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = AparAppsWebsite
+build_property.RootNamespace = AparAppsWebsite
+build_property.ProjectDir = D:\AparAppsWebsite\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 8.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = D:\AparAppsWebsite
+build_property._RazorSourceGeneratorDebug = 
+
+[D:/AparAppsWebsite/Views/Checklist/Bulk.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2hlY2tsaXN0XEJ1bGsuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Checklist/ByJenis.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2hlY2tsaXN0XEJ5SmVuaXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Checklist/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2hlY2tsaXN0XENyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Checklist/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2hlY2tsaXN0XEVkaXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Checklist/index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQ2hlY2tsaXN0XGluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Employee/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVcQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Employee/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVcRGV0YWlscy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Employee/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVcRWRpdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Employee/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Home/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Home/Privacy.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/IntervalPetugas/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW50ZXJ2YWxQZXR1Z2FzXENyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/IntervalPetugas/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW50ZXJ2YWxQZXR1Z2FzXERldGFpbHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/IntervalPetugas/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW50ZXJ2YWxQZXR1Z2FzXEVkaXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/IntervalPetugas/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW50ZXJ2YWxQZXR1Z2FzXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/JenisPeralatan/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSmVuaXNQZXJhbGF0YW5cQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/JenisPeralatan/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSmVuaXNQZXJhbGF0YW5cRGV0YWlscy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/JenisPeralatan/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSmVuaXNQZXJhbGF0YW5cRWRpdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/JenisPeralatan/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSmVuaXNQZXJhbGF0YW5cSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/JenisPeralatan/_Form.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSmVuaXNQZXJhbGF0YW5cX0Zvcm0uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Lokasi/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rYXNpXENyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Lokasi/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rYXNpXERldGFpbHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Lokasi/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rYXNpXEVkaXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Lokasi/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTG9rYXNpXEluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Maintenance/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWFpbnRlbmFuY2VcQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Maintenance/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWFpbnRlbmFuY2VcRGV0YWlscy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Maintenance/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTWFpbnRlbmFuY2VcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Peralatan/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXENyZWF0ZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Peralatan/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXERldGFpbHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Peralatan/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXEVkaXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Peralatan/index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXGluZGV4LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Peralatan/QR.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXFFSLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Peralatan/_Form.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXF9Gb3JtLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xDcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/Delete.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xEZWxldGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xEZXRhaWxzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xFZGl0LmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/_Alerts.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xfQWxlcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Petugas/_FormPetugas.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGV0dWdhc1xfRm9ybVBldHVnYXMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/RolePetugas/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUm9sZVBldHVnYXNcQ3JlYXRlLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/RolePetugas/Details.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUm9sZVBldHVnYXNcRGV0YWlscy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/RolePetugas/Edit.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUm9sZVBldHVnYXNcRWRpdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/RolePetugas/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUm9sZVBldHVnYXNcSW5kZXguY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/RolePetugas/_FormRolePetugas.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUm9sZVBldHVnYXNcX0Zvcm1Sb2xlUGV0dWdhcy5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/Error.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF8uY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_Alerts.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9BbGVydHMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_Navbar.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9OYXZiYXIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_Sidebar.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9TaWRlYmFyLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_Toast.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9Ub2FzdC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_ValidationScriptsPartial.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9WYWxpZGF0aW9uU2NyaXB0c1BhcnRpYWwuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/_ViewImports.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdJbXBvcnRzLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/_ViewStart.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcX1ZpZXdTdGFydC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/AparAppsWebsite/Views/Shared/_Layout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9MYXlvdXQuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = b-lmgigiv7c9

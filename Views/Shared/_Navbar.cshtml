@@ -1,0 +1,90 @@
+@{
+    string current = $"{ViewContext.RouteData.Values["Controller"]}";
+    Func<string, string> active = c => c.Equals(current, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+}
+<nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
+    <div class="container-fluid">
+        <!-- Left: Menu btn (mobile) + brand -->
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-icon d-lg-none" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Buka menu">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+
+            <a class="navbar-brand d-flex align-items-center gap-2" asp-controller="Home" asp-action="Index">
+                <img src="~/images/kpc-logo.png" alt="KPC" />
+                @* <span class="fw-semibold">Apar Admin</span> *@
+            </a>
+        </div>
+
+        <!-- Right: quick links (desktop) + CTA -->
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            <div class="d-none d-lg-flex align-items-center gap-3 me-2">
+                <a class="nav-link @active("Home")" asp-controller="Home" asp-action="Index">Dashboard</a>
+                <a class="nav-link @active("Maintenance")" asp-controller="Maintenance"
+                    asp-action="Index">Maintenance</a>
+            </div>
+            <a class="btn btn-sm btn-brand" asp-controller="Peralatan" asp-action="Create">
+                <i class="bi bi-plus-circle me-1"></i><span class="d-none d-sm-inline">Tambah</span>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Offcanvas Sidebar (Mobile) -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+    <div class="offcanvas-header border-bottom">
+        <div class="d-flex align-items-center gap-2">
+            <img src="~/images/kpc-logo.png" alt="KPC" style="height:28px" />
+            <h6 class="offcanvas-title mb-0" id="mobileSidebarLabel">Menu</h6>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Tutup"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <nav class="nav flex-column p-2">
+            <a class="nav-link @active("Home")" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+            <a class="nav-link @active("Peralatan")" asp-controller="Peralatan" asp-action="Index">
+                <i class="bi bi-fire me-2"></i> Peralatan
+            </a>
+            <a class="nav-link @active("JenisPeralatan")" asp-controller="JenisPeralatan" asp-action="Index">
+                <i class="bi bi-ui-checks me-2"></i> Jenis Peralatan
+            </a>
+            <a class="nav-link @active("Checklist")" asp-controller="Checklist" asp-action="Index">
+                <i class="bi bi-list-check me-2"></i> Checklist
+            </a>
+            <a class="nav-link @active("Lokasi")" asp-controller="Lokasi" asp-action="Index">
+                <i class="bi bi-geo-alt me-2"></i> Lokasi
+            </a>
+            <a class="nav-link @active("Petugas")" asp-controller="Petugas" asp-action="Index">
+                <i class="bi bi-people me-2"></i> Petugas
+            </a>
+            <a class="nav-link @active("IntervalPetugas")" asp-controller="IntervalPetugas" asp-action="Index">
+                <i class="bi bi-people me-2"></i> Interval Petugas
+            </a>
+            <a class="nav-link @active("Maintenance")" asp-controller="Maintenance" asp-action="Index">
+                <i class="bi bi-clipboard-check me-2"></i> Maintenance
+            </a>
+        </nav>
+        <div class="p-3 border-top small text-muted">
+            © @DateTime.Now.Year KPC • Apar Admin
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto close offcanvas when clicking a menu link
+        document.addEventListener('click', function (e) {
+            const link = e.target.closest('.offcanvas .nav-link');
+            if (link) {
+                const offcanvasEl = document.querySelector('.offcanvas.show');
+                if (offcanvasEl) {
+                    const oc = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                    if (oc) oc.hide();
+                }
+            }
+        });
+    </script>
+}

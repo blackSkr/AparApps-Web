@@ -1,0 +1,220 @@
+@* Views/Checklist/Bulk.cshtml *@
+@model AparAppsWebsite.Models.BulkChecklistCreate
+
+@{
+    ViewData["Title"] = "Bulk Create Checklist";
+}
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Bulk Create Checklist</h3>
+                    <p class="text-muted mb-0">Tambah multiple checklist sekaligus untuk satu jenis peralatan</p>
+                </div>
+
+                <form asp-action="Bulk" method="post" id="bulkForm">
+                    <div class="card-body">
+                        @if (ViewBag.Error != null)
+                        {
+                            <div class="alert alert-danger">
+                                @ViewBag.Error
+                            </div>
+                        }
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="JenisId" class="form-label">
+                                        Jenis Peralatan <span class="text-danger">*</span>
+                                    </label>
+                                    <select asp-for="JenisId" class="form-select" id="jenisSelect">
+                                        <option value="">-- Pilih Jenis Peralatan --</option>
+                                        @if (ViewBag.JenisList != null)
+                                        {
+                                            @foreach (var jenis in ViewBag.JenisList as
+                                                                                    List<AparAppsWebsite.Models.DropdownItem>)
+                                            {
+                                                <option value="@jenis.Id">@jenis.Nama</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="JenisId" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Template Checklist</label>
+                                    <select id="templateSelect" class="form-select">
+                                        <option value="">-- Pilih Template --</option>
+                                        <option value="apar">APAR / Fire Extinguisher</option>
+                                        <option value="safety">Safety Equipment</option>
+                                        <option value="mechanical">Mechanical Equipment</option>
+                                        <option value="electrical">Electrical Equipment</option>
+                                    </select>
+                                    <small class="form-text text-muted">Template untuk mempercepat input</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <label class="form-label">
+                                    Pertanyaan Checklist <span class="text-danger">*</span>
+                                    <span class="badge bg-info ms-2" id="questionCount">0 pertanyaan</span>
+                                </label>
+
+                                <div id="questionsContainer">
+                                    <!-- Dynamic questions will be added here -->
+                                </div>
+
+                                <button type="button" class="btn btn-outline-primary mt-2" onclick="addQuestion()">
+                                    <i class="fas fa-plus"></i> Tambah Pertanyaan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="alert alert-success">
+                                    <i class="fas fa-rocket"></i>
+                                    <strong>Pro Tips:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Gunakan template untuk mempercepat pembuatan checklist</li>
+                                        <li>Drag & drop untuk mengubah urutan pertanyaan</li>
+                                        <li>Gunakan pertanyaan yang dapat dijawab dengan Yes/No</li>
+                                        <li>Pertanyaan akan muncul di mobile app sesuai urutan</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="d-flex justify-content-between">
+                            <a href="@Url.Action("Index")" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Kembali
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Simpan Semua Checklist
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        let questionIndex = 0;
+
+        // Templates
+        const templates = {
+            apar: [
+                "Apakah kondisi tabung tidak berkarat atau penyok?",
+                "Apakah pressure gauge menunjukkan angka hijau (normal)?",
+                "Apakah pin safety masih dalam kondisi baik?",
+                "Apakah selang tidak retak atau tersumbat?",
+                "Apakah label instruksi masih terbaca dengan jelas?",
+                "Apakah APAR mudah diakses dan tidak terhalang?",
+                "Apakah bracket/dudukan APAR masih kuat?"
+            ],
+            safety: [
+                "Apakah peralatan dalam kondisi bersih?",
+                "Apakah tidak ada kerusakan fisik yang terlihat?",
+                "Apakah fungsi peralatan bekerja dengan normal?",
+                "Apakah peralatan mudah diakses saat diperlukan?",
+                "Apakah marking/label safety masih terlihat jelas?"
+            ],
+            mechanical: [
+                "Apakah tidak ada kebocoran oli atau cairan?",
+                "Apakah komponen bergerak berfungsi dengan lancar?",
+                "Apakah tidak ada getaran atau suara abnormal?",
+                "Apakah baut dan sambungan dalam kondisi kencang?",
+                "Apakah sistem pelumasan berfungsi dengan baik?"
+            ],
+            electrical: [
+                "Apakah casing peralatan tidak rusak atau retak?",
+                "Apakah kabel power dalam kondisi baik (tidak terkelupas)?",
+                "Apakah grounding/earthing terpasang dengan baik?",
+                "Apakah indikator power menyala normal?",
+                "Apakah tidak ada percikan api atau bau terbakar?"
+            ]
+        };
+
+        function addQuestion(text = '') {
+            const container = document.getElementById('questionsContainer');
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'mb-3 question-item';
+            questionDiv.innerHTML = `
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-grip-vertical" style="cursor: move;"></i>
+                        </span>
+                        <input type="text" name="Pertanyaan[${questionIndex}]" class="form-control" 
+                               value="${text}" placeholder="Masukkan pertanyaan checklist..." required>
+                        <button type="button" class="btn btn-outline-danger" onclick="removeQuestion(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            container.appendChild(questionDiv);
+            questionIndex++;
+            updateQuestionCount();
+        }
+
+        function removeQuestion(button) {
+            const questionDiv = button.closest('.question-item');
+            questionDiv.remove();
+            updateQuestionCount();
+        }
+
+        function updateQuestionCount() {
+            const count = document.querySelectorAll('.question-item').length;
+            document.getElementById('questionCount').textContent = `${count} pertanyaan`;
+        }
+
+        // Template selector
+        document.getElementById('templateSelect').addEventListener('change', function () {
+            const template = this.value;
+            if (template && templates[template]) {
+                // Clear existing questions
+                document.getElementById('questionsContainer').innerHTML = '';
+                questionIndex = 0;
+
+                // Add template questions
+                templates[template].forEach(question => {
+                    addQuestion(question);
+                });
+            }
+        });
+
+        // Form submission handler
+        document.getElementById('bulkForm').addEventListener('submit', function (e) {
+            const questions = document.querySelectorAll('input[name^="Pertanyaan"]');
+            if (questions.length === 0) {
+                e.preventDefault();
+                alert('Minimal 1 pertanyaan harus diisi!');
+                return false;
+            }
+
+            // Re-index questions to ensure proper array
+            questions.forEach((input, index) => {
+                input.name = `Pertanyaan[${index}]`;
+            });
+        });
+
+        // Add initial question
+        addQuestion();
+
+        // Make questions sortable (drag & drop)
+        // Note: You can add SortableJS library for drag & drop functionality
+    </script>
+}

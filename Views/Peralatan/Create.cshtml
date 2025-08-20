@@ -1,0 +1,19 @@
+@model AparAppsWebsite.Models.Peralatan
+@{
+    ViewData["Title"] = "Tambah Peralatan";
+}
+<partial name="~/Views/Shared/_Alerts.cshtml" />
+<h2 class="mb-3">Tambah Peralatan</h2>
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+  <partial name="_Form" />
+  <div class="mb-3">
+    <label class="form-label">Foto (bisa multi)</label>
+    <input type="file" name="files" class="form-control" multiple />
+    <div class="form-text">Maks 20 file, 10MB per file.</div>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary">Simpan</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Batal</a>
+  </div>
+</form>
+@section Scripts{ <partial name="_ValidationScriptsPartial" /> }

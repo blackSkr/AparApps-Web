@@ -1,0 +1,38 @@
+@model AparAppsWebsite.Models.IntervalPetugas
+@{
+    ViewData["Title"] = "Edit Interval Petugas";
+}
+<h3>Edit Interval: @Model.NamaInterval</h3>
+
+@if (ViewBag.Error != null)
+{
+    <div class="alert alert-danger">@ViewBag.Error</div>
+}
+
+<form asp-action="Edit" method="post" class="card">
+    <input type="hidden" asp-for="Id" />
+    <div class="card-body">
+        <div class="mb-3">
+            <label asp-for="NamaInterval" class="form-label">Nama Interval</label>
+            <input asp-for="NamaInterval" class="form-control" />
+            <span asp-validation-for="NamaInterval" class="text-danger"></span>
+        </div>
+        <div class="mb-3">
+            <label asp-for="Bulan" class="form-label">Interval (bulan)</label>
+            <input asp-for="Bulan" type="number" class="form-control" min="0" max="12" />
+            <div class="form-text">0 = Interval Khusus</div>
+            <span asp-validation-for="Bulan" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="card-footer d-flex justify-content-between">
+        <a class="btn btn-secondary" href="@Url.Action("Index")"><i class="fas fa-arrow-left"></i> Kembali</a>
+        <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Update</button>
+    </div>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

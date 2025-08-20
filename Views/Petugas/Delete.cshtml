@@ -1,0 +1,15 @@
+@model AparAppsWebsite.Models.Petugas
+@{
+    ViewData["Title"] = "Hapus Petugas";
+}
+
+<h3>Apakah Anda yakin ingin menghapus petugas ini?</h3>
+<div>
+    <strong>@Model.BadgeNumber</strong> — @Model.EmployeeNama
+</div>
+
+<form asp-action="Delete" method="post">
+    @Html.HiddenFor(m => m.Id)
+    <button type="submit" class="btn btn-danger">Hapus</button>
+    <a asp-action="Index" class="btn btn-secondary">Batal</a>
+</form>

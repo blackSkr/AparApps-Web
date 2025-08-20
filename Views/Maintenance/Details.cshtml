@@ -1,0 +1,446 @@
+@model AparAppsWebsite.Models.Maintenance
+@{
+    ViewData["Title"] = $"Maintenance Detail #{Model.Id}";
+
+    var checklistTotal   = Model.Checklist?.Count ?? 0;
+    var checklistBaik    = Model.Checklist?.Count(c => c.Dicentang) ?? 0;
+    var checklistTidak   = checklistTotal - checklistBaik;
+    var checklistPercent = checklistTotal > 0 ? (int)Math.Round(100.0 * checklistBaik / checklistTotal) : 0;
+
+    var isOverdue = Model.NextDueDate != null && Model.NextDueDate.Date < DateTime.Today;
+    var isDueSoon = Model.NextDueDate != null && !isOverdue && (Model.NextDueDate.Date - DateTime.Today).TotalDays <= 7;
+}
+
+<style>
+    /* --- micro styles to elevate look --- */
+    .page-actions .btn { border-radius: .5rem; }
+    .stat-tile {
+        background: var(--bs-light);
+        border-radius: .75rem;
+        padding: 1rem;
+        height: 100%;
+        border: 1px solid rgba(0,0,0,.05);
+    }
+    .stat-tile .label { font-size:.8rem; color: var(--bs-secondary); text-transform: uppercase; letter-spacing: .03em; }
+    .list-check .status-pill { min-width: 72px; text-align:center; }
+    .meta-grid .meta {
+        display:flex; gap:.75rem; align-items:flex-start; padding:.5rem 0; border-bottom:1px dashed rgba(0,0,0,.06);
+    }
+    .meta-grid .meta:last-child { border-bottom:0; }
+    .meta .meta-icon {
+        width: 36px; height:36px; display:flex; align-items:center; justify-content:center;
+        border-radius:.5rem; background: var(--bs-light);
+    }
+    .badge-soft {
+        background: rgba(0,0,0,.05); color: var(--bs-body-color); border:1px solid rgba(0,0,0,.06);
+    }
+    .timeline {
+        position: relative; padding-left: 1.25rem;
+    }
+    .timeline::before {
+        content:""; position:absolute; left:.45rem; top:.2rem; bottom:.2rem; width:2px; background: rgba(0,0,0,.1);
+    }
+    .timeline .t-item { position:relative; padding:.5rem 0 .5rem 0; }
+    .timeline .t-item::before {
+        content:""; position:absolute; left:-.06rem; top:.8rem; width:.7rem; height:.7rem; border-radius:50%; background: var(--bs-primary);
+        box-shadow: 0 0 0 3px rgba(13,110,253,.15);
+    }
+    .photo-card img { object-fit:cover; width:100%; height:140px; border-radius:.5rem; }
+    .sticky-side { position: sticky; top: 1rem; }
+    /* === Timeline (rapi) === */
+.tline { position: relative; margin: .25rem 0 0 0; padding-right: 1.75rem; }
+.tline::before {
+    content:""; position:absolute; left:.62rem; top:.4rem; bottom:.4rem; width:2px; background: rgba(0,0,0,.08);
+}
+.tline-item { position: relative; display:flex; gap:.75rem; padding:.35rem 0; }
+.tline-point {
+    position: absolute; left:.25rem; top:.55rem; width:.9rem; height:.9rem; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; background:#fff; border:2px solid var(--bs-primary);
+    box-shadow: 0 0 0 3px rgba(13,110,253,.10);
+}
+.tline-body { margin-left:.75rem; }
+.tline-title { font-weight:600; line-height:1.2; padding-left: 15px; }
+.tline-meta { font-size:.875rem; color: var(--bs-secondary-color, #6c757d); padding-left: 15px;}
+.tline-badge {
+    font-size:.75rem; border-radius:.35rem; padding:.15rem .45rem; border:1px solid rgba(0,0,0,.06); background: var(--bs-light);
+}
+
+/* warna status pada titik */
+.tline-point.success { border-color: var(--bs-success); box-shadow: 0 0 0 3px rgba(25,135,84,.12); }
+.tline-point.warning { border-color: var(--bs-warning); box-shadow: 0 0 0 3px rgba(255,193,7,.18); }
+.tline-point.danger  { border-color: var(--bs-danger);  box-shadow: 0 0 0 3px rgba(220,53,69,.16); }
+
+    @@media (max-width: 991.98px) { .sticky-side { position: static; } } /* Razor-safe: use @@media */
+</style>
+
+<div class="container-fluid">
+    <!-- Header / Breadcrumbs / Actions -->
+    <div class="row g-3 align-items-center">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="javascript:history.back()">Maintenance</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Detail</li>
+                </ol>
+            </nav>
+            <h3 class="mb-0">Detail Pemeriksaan</h3>
+            <div class="text-muted small">ID: @Model.Id</div>
+        </div>
+        <div class="col-auto page-actions d-flex gap-2">
+            <button class="btn btn-outline-secondary" onclick="history.back()">
+                <i class="fas fa-arrow-left"></i> Kembali
+            </button>
+            <button class="btn btn-outline-primary" onclick="window.print()" data-bs-toggle="tooltip" title="Cetak halaman ini">
+                <i class="fas fa-print"></i> Cetak
+            </button>
+        </div>
+        <hr class="mt-2"/>
+    </div>
+
+    <div class="row g-3">
+        <!-- LEFT -->
+        <div class="col-lg-8">
+            <!-- Summary Card -->
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                        <div>
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                <span class="badge bg-primary" data-bs-toggle="tooltip" title="Kode APAR">Kode: @Model.AparKode</span>
+                                <span class="badge bg-info text-dark" data-bs-toggle="tooltip" title="Jenis APAR">Jenis: @Model.JenisNama</span>
+                                <span class="badge bg-secondary" data-bs-toggle="tooltip" title="Lokasi penempatan">Lokasi: @Model.LokasiNama</span>
+                            </div>
+                            <div class="small text-muted">
+                                Diperiksa pada <strong>@Model.TanggalPemeriksaan.ToString("dd MMM yyyy")</strong> oleh
+                                <span class="badge bg-dark">@Model.PetugasBadge</span>
+                                @if (!string.IsNullOrWhiteSpace(Model.PetugasRole))
+                                {
+                                    <span class="badge badge-soft">@Model.PetugasRole</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="mb-2">
+                                @* <span class="badge bg-@Model.KondisiBadge"><i class="fas fa-stethoscope"></i> Kondisi: @Model.Kondisi</span> *@
+                            </div>
+                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                <span class="badge bg-@Model.StatusBadge">@Model.StatusText</span>
+                                <span class="small @((isOverdue)? "text-danger fw-semibold" : isDueSoon ? "text-warning fw-semibold" : "text-muted")">
+                                    <i class="far fa-clock"></i>
+                                    Jatuh tempo: @(Model.NextDueDate == default ? "-" : Model.NextDueDate.ToString("dd MMM yyyy"))
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- KPI Tiles -->
+                    <div class="row g-2">
+                        <div class="col-md-3 col-6">
+                            <div class="stat-tile">
+                                <div class="label">Tekanan</div>
+                                <div class="h4 mb-0">@((Model.Tekanan?.ToString("0.0") ?? "-"))</div>
+                                <div class="small text-muted"><i class="fas fa-tachometer-alt"></i> bar</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-tile">
+                                <div class="label">Masalah</div>
+                                <div class="h4 mb-0">@((Model.JumlahMasalah?.ToString() ?? "0"))</div>
+                                <div class="small text-muted"><i class="fas fa-exclamation-triangle"></i> temuan</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-tile">
+                                <div class="label">Interval</div>
+                                <div class="h4 mb-0">@((Model.IntervalBulan?.ToString() ?? "-"))</div>
+                                <div class="small text-muted"><i class="far fa-calendar"></i> bulan</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <div class="stat-tile">
+                                <div class="label">Checklist Lolos</div>
+                                <div class="h4 mb-1">@checklistPercent%</div>
+                                <div class="progress" role="progressbar" aria-valuenow="@checklistPercent" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar @((checklistPercent<50)?"bg-danger":(checklistPercent<80)?"bg-warning":"")" style="width:@checklistPercent%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if(!string.IsNullOrWhiteSpace(Model.CatatanMasalah) || !string.IsNullOrWhiteSpace(Model.Rekomendasi) || !string.IsNullOrWhiteSpace(Model.TindakLanjut))
+                    {
+                        <hr />
+                        <div class="row g-3">
+                            @if(!string.IsNullOrWhiteSpace(Model.CatatanMasalah))
+                            {
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="fw-bold mb-2"><i class="fas fa-bug"></i> Catatan Masalah</div>
+                                        <div class="small">@Model.CatatanMasalah</div>
+                                    </div>
+                                </div>
+                            }
+                            @if(!string.IsNullOrWhiteSpace(Model.Rekomendasi))
+                            {
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="fw-bold mb-2"><i class="fas fa-lightbulb"></i> Rekomendasi</div>
+                                        <div class="small">@Model.Rekomendasi</div>
+                                    </div>
+                                </div>
+                            }
+                            @if(!string.IsNullOrWhiteSpace(Model.TindakLanjut))
+                            {
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="fw-bold mb-2"><i class="fas fa-tools"></i> Tindak Lanjut</div>
+                                        <div class="small">@Model.TindakLanjut</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <!-- Meta quick facts -->
+                    <hr />
+                    <div class="row meta-grid">
+                        <div class="col-md-6">
+                            <div class="meta">
+                                <div class="meta-icon"><i class="fas fa-hashtag"></i></div>
+                                <div>
+                                    <div class="small text-muted">Kode APAR</div>
+                                    <div class="fw-semibold">@Model.AparKode</div>
+                                </div>
+                            </div>
+                            <div class="meta">
+                                <div class="meta-icon"><i class="fas fa-fire-extinguisher"></i></div>
+                                <div>
+                                    <div class="small text-muted">Jenis</div>
+                                    <div class="fw-semibold">@Model.JenisNama</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="meta">
+                                <div class="meta-icon"><i class="fas fa-map-marker-alt"></i></div>
+                                <div>
+                                    <div class="small text-muted">Lokasi</div>
+                                    <div class="fw-semibold">@Model.LokasiNama</div>
+                                </div>
+                            </div>
+                            <div class="meta">
+                                <div class="meta-icon"><i class="far fa-user"></i></div>
+                                <div>
+                                    <div class="small text-muted">Petugas</div>
+                                    <div class="fw-semibold">@Model.PetugasBadge @if(!string.IsNullOrWhiteSpace(Model.PetugasRole)){<span class="text-muted">· @Model.PetugasRole</span>}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Checklist -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light d-flex align-items-center justify-content-between">
+                    <strong>Checklist Hasil</strong>
+                    <span class="small text-muted">
+                        Total: <strong>@checklistTotal</strong> · Baik: <strong>@checklistBaik</strong> · Tidak: <strong>@checklistTidak</strong>
+                    </span>
+                </div>
+                <div class="card-body">
+                    @if (checklistTotal > 0)
+                    {
+                        <ul class="list-group list-group-flush list-check">
+                            @foreach (var c in Model.Checklist)
+                            {
+                                <li class="list-group-item d-flex align-items-start justify-content-between">
+                                    <div class="me-3">
+                                        <div class="fw-semibold mb-1"><i class="far fa-check-square me-1 text-muted"></i>@c.PertanyaanChecklist</div>
+                                        @if (!string.IsNullOrWhiteSpace(c.Keterangan) || !string.IsNullOrWhiteSpace(c.Alasan))
+                                        {
+                                            <div class="small text-muted">
+                                                @if(!string.IsNullOrWhiteSpace(c.Keterangan)){
+                                                    <span class="me-3"><i class="far fa-comment"></i> @c.Keterangan</span>
+                                                }
+                                                @if(!string.IsNullOrWhiteSpace(c.Alasan)){
+                                                    <span><i class="far fa-lightbulb"></i> Alasan: @c.Alasan</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                    <span class="status-pill badge bg-@(c.Dicentang ? "success" : "danger")">
+                                        @(c.Dicentang ? "Baik" : "Tidak")
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <div class="text-muted">Tidak ada item checklist.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="col-lg-4">
+            <div class="sticky-side">
+                <!-- Status & Due -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light d-flex align-items-center justify-content-between">
+        <strong>Status Pemeriksaan</strong>
+        <span class="tline-badge">
+            @(Model.NextDueDate == default ? "Jatuh tempo: -" : $"Jatuh tempo: {Model.NextDueDate:dd MMM yyyy}")
+        </span>
+    </div>
+
+    <div class="card-body">
+        <!-- badges ringkas -->
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <span class="badge bg-@Model.KondisiBadge"><i class="fas fa-heartbeat"></i> @Model.Kondisi</span>
+            <span class="badge bg-@Model.StatusBadge">@Model.StatusText</span>
+            @{
+                var dueBadgeClass = (isOverdue) ? "bg-danger" : (isDueSoon ? "bg-warning text-dark" : "bg-success");
+                var dueText = (Model.NextDueDate == default) ? "-" : Model.NextDueDate.ToString("dd MMM yyyy");
+            }
+            <span class="badge @dueBadgeClass">
+                <i class="far fa-clock"></i> @dueText
+            </span>
+        </div>
+
+        <!-- timeline rapi -->
+        <div class="tline">
+            <!-- Item 1: Tanggal Pemeriksaan -->
+            <div class="tline-item">
+                <span class="tline-point success" aria-hidden="true"></span>
+                <div class="tline-body">
+                    <div class="tline-title">Tanggal Pemeriksaan</div>
+                    <div class="tline-meta">
+                        <i class="far fa-calendar-check"></i>
+                        @Model.TanggalPemeriksaan.ToString("dddd, dd MMM yyyy")
+                    </div>
+                </div>
+            </div>
+
+            <!-- Item 2: Jadwal Berikutnya -->
+            @{
+                var nextDueClass = isOverdue ? "danger" : (isDueSoon ? "warning" : "success");
+                var nextDueText  = (Model.NextDueDate == default) ? "-" : Model.NextDueDate.ToString("dddd, dd MMM yyyy");
+                var nextDueIcon  = isOverdue ? "fas fa-exclamation-circle"
+                                 : isDueSoon ? "fas fa-exclamation-triangle"
+                                 : "far fa-calendar";
+            }
+            <div class="tline-item">
+                <span class="tline-point @nextDueClass" aria-hidden="true"></span>
+                <div class="tline-body">
+                    <div class="tline-title">Jadwal Berikutnya</div>
+                    <div class="tline-meta">
+                        <i class="@nextDueIcon"></i> @nextDueText
+                        @if (isOverdue)
+                        {
+                            <span class="ms-2 badge bg-danger">Terlambat</span>
+                        }
+                        else if (isDueSoon)
+                        {
+                            <span class="ms-2 badge bg-warning text-dark">Mendekati</span>
+                        }
+                        else if (Model.NextDueDate != default)
+                        {
+                            <span class="ms-2 badge bg-success">Aman</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+                <!-- Photos -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-light d-flex align-items-center justify-content-between">
+                        <strong>Foto Pemeriksaan</strong>
+                        @if (Model.Photos?.Count > 0)
+                        {
+                            <span class="badge badge-soft">@Model.Photos.Count foto</span>
+                        }
+                    </div>
+                    <div class="card-body">
+                        @if (Model.Photos?.Count > 0)
+                        {
+                            <div class="row g-2">
+                                @foreach(var p in Model.Photos)
+                                {
+                                    <div class="col-6">
+                                        <a href="@p.FotoPath" class="d-block photo-card" data-bs-toggle="modal" data-bs-target="#photoModal" data-photo="@p.FotoPath" data-time="@p.UploadedAt">
+                                            <img src="@p.FotoPath" alt="Foto pemeriksaan" />
+                                        </a>
+                                        <div class="small text-muted mt-1">
+                                            <i class="far fa-clock"></i> @p.UploadedAt
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-muted">Tidak ada foto.</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Modal -->
+<div class="modal fade" id="photoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="far fa-image"></i> Foto Pemeriksaan</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+      </div>
+      <div class="modal-body">
+        <img id="photoPreview" src="" class="img-fluid rounded w-100" style="max-height:70vh; object-fit:contain;" />
+        <div class="small text-muted mt-2" id="photoTime"></div>
+      </div>
+      <div class="modal-footer">
+        <a id="photoOpenNew" href="#" target="_blank" class="btn btn-outline-primary">
+            <i class="fas fa-external-link-alt"></i> Buka di Tab Baru
+        </a>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    // Bootstrap tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        if (window.bootstrap && bootstrap.Tooltip) new bootstrap.Tooltip(el);
+    });
+
+    // Photo modal viewer
+    const photoModal = document.getElementById('photoModal');
+    if (photoModal) {
+        photoModal.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+            const src = trigger.getAttribute('data-photo');
+            const time = trigger.getAttribute('data-time') || '';
+            const img = photoModal.querySelector('#photoPreview');
+            const timeEl = photoModal.querySelector('#photoTime');
+            const openNew = photoModal.querySelector('#photoOpenNew');
+
+            img.src = src;
+            timeEl.textContent = time ? ('Diunggah: ' + time) : '';
+            openNew.href = src;
+        });
+    }
+</script>

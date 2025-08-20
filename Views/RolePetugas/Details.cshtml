@@ -1,0 +1,82 @@
+@model AparAppsWebsite.Models.RolePetugas
+@{
+    ViewData["Title"] = "Detail Role Petugas";
+    string intervalLabel = string.IsNullOrWhiteSpace(Model?.IntervalNama)
+    ? "-"
+    : (Model?.Bulan.HasValue == true ? $"{Model.IntervalNama} ({Model.Bulan} bln)" : Model!.IntervalNama);
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12 col-lg-10 col-xl-8">
+
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">@ViewData["Title"]</h3>
+                    <div class="btn-group">
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a asp-action="Index" class="btn btn-light">
+                            <i class="fas fa-list"></i> List
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success">@TempData["Success"]</div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger">@TempData["Error"]</div>
+                    }
+
+                    <dl class="row">
+                        <dt class="col-sm-3">ID</dt>
+                        <dd class="col-sm-9">@Model.Id</dd>
+
+                        <dt class="col-sm-3">Nama Role</dt>
+                        <dd class="col-sm-9">@Model.NamaRole</dd>
+
+                        <dt class="col-sm-3">Interval</dt>
+                        <dd class="col-sm-9">
+                            @if (intervalLabel != "-")
+                            {
+                                <span class="badge bg-info text-dark">@intervalLabel</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">-</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-3">Status</dt>
+                        <dd class="col-sm-9">
+                            @if (Model.IsActive)
+                            {
+                                <span class="badge bg-success">Aktif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Nonaktif</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-3">Deskripsi</dt>
+                        <dd class="col-sm-9">
+                            <pre class="mb-0" style="white-space: pre-wrap;">@Model.Deskripsi</pre>
+                        </dd>
+
+                        @if (Model.JumlahPetugas.HasValue)
+                        {
+                            <dt class="col-sm-3">Jumlah Petugas</dt>
+                            <dd class="col-sm-9">@Model.JumlahPetugas</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>

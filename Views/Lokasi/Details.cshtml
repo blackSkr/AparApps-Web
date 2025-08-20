@@ -1,0 +1,30 @@
+@model AparAppsWebsite.Models.LokasiFormVM
+
+<h2>Detail Lokasi</h2>
+
+<dl class="row">
+  <dt class="col-sm-3">Nama</dt>
+  <dd class="col-sm-9">@Model.Nama</dd>
+  <dt class="col-sm-3">Koordinat</dt>
+  <dd class="col-sm-9">@Model.lat, @Model.Longitude</dd>
+</dl>
+
+<h4 class="mt-4">PIC di Lokasi</h4>
+@if (!(Model.CurrentPetugas?.Any() ?? false))
+{
+  <div class="text-muted">Belum ada petugas.</div>
+}
+else
+{
+  <ul class="list-group">
+    @foreach (var p in Model.CurrentPetugas)
+    {
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>
+          <strong>@(p.Nama ?? "-")</strong>
+          <span class="text-muted">(@p.BadgeNumber) — @(p.Role ?? "-")</span>
+        </div>
+      </li>
+    }
+  </ul>
+}

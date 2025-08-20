@@ -1,0 +1,477 @@
+@model AparAppsWebsite.Models.EmployeePagedResponse
+@{
+    ViewData["Title"] = "Daftar Employee";
+
+    // -- Nilai dari controller (ViewBag) --
+    string q = ViewBag.Query as string ?? "";
+    string sortBy = ViewBag.SortBy as string ?? "Id";
+    string sortDir = ViewBag.SortDir as string ?? "ASC";
+    int curPage = ViewBag.Page ?? 1; // <- rename dari 'page' untuk hindari @page directive
+    int pageSize = ViewBag.PageSize ?? 10;
+    int total = ViewBag.Total ?? 0;
+
+    // -- Data list --
+    var items = Model?.items ?? new List<AparAppsWebsite.Models.Employee>();
+
+    // -- Paging --
+    int totalPages = (int)Math.Ceiling(total / Math.Max(1.0, pageSize));
+    int startIdx = total == 0 ? 0 : (curPage - 1) * pageSize + 1;
+    int endIdx = Math.Min(curPage * pageSize, total);
+    int left = Math.Max(1, curPage - 2);
+    int right = Math.Min(totalPages, curPage + 2);
+
+    // -- Utils --
+    Func<string, string> ToggleDir = (col) =>
+    (string.Equals(sortBy, col, StringComparison.OrdinalIgnoreCase) && sortDir.Equals("ASC",
+    StringComparison.OrdinalIgnoreCase))
+    ? "DESC" : "ASC";
+
+    // Sorting URLs (precompute)
+    string sIdUrl = Url.Action("Index", new { q, page = 1, pageSize, sortBy = "Id", sortDir = ToggleDir("Id") }) ?? "#";
+    string sNamaUrl = Url.Action("Index", new { q, page = 1, pageSize, sortBy = "Nama", sortDir = ToggleDir("Nama") }) ??
+    "#";
+    string sBadgeUrl = Url.Action("Index", new
+    {
+        q,
+        page = 1,
+        pageSize,
+        sortBy = "BadgeNumber",
+        sortDir =
+    ToggleDir("BadgeNumber")
+    }) ?? "#";
+    string sDivUrl = Url.Action("Index", new { q, page = 1, pageSize, sortBy = "Divisi", sortDir = ToggleDir("Divisi") }) ??
+    "#";
+    string sDepUrl = Url.Action("Index", new
+    {
+        q,
+        page = 1,
+        pageSize,
+        sortBy = "Departemen",
+        sortDir =
+    ToggleDir("Departemen")
+    }) ?? "#";
+
+    // Prev/Next URL (precompute)
+    string prevUrl = Url.Action("Index", new { q, page = Math.Max(1, curPage - 1), pageSize, sortBy, sortDir }) ?? "#";
+    string nextUrl = Url.Action("Index", new
+    {
+        q,
+        page = Math.Min(Math.Max(1, totalPages), curPage + 1),
+        pageSize,
+        sortBy,
+        sortDir
+    }) ?? "#";
+
+    // Helper URL nomor halaman (hindari nama yang diawali "page" → @page directive)
+    Func<int, string> pg = (int p) => Url.Action("Index", new { q, page = p, pageSize, sortBy, sortDir }) ?? "#";
+
+    // Flag sort aktif & caret
+    bool sIdAct = sortBy.Equals("Id", StringComparison.OrdinalIgnoreCase);
+    bool sNamaAct = sortBy.Equals("Nama", StringComparison.OrdinalIgnoreCase);
+    bool sBadAct = sortBy.Equals("BadgeNumber", StringComparison.OrdinalIgnoreCase);
+    bool sDivAct = sortBy.Equals("Divisi", StringComparison.OrdinalIgnoreCase);
+    bool sDepAct = sortBy.Equals("Departemen", StringComparison.OrdinalIgnoreCase);
+    string caret = sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase) ? "↑" : "↓";
+}
+
+<style>
+    .toolbar .form-control,
+    .toolbar .form-select {
+        min-width: 180px;
+    }
+
+    .toolbar .btn {
+        border-radius: .45rem;
+    }
+
+    .k-chip {
+        font-size: .8rem;
+        border: 1px solid rgba(0, 0, 0, .06);
+        background: var(--bs-light);
+    }
+
+    .sticky-head th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bs-body-bg);
+    }
+
+    .table thead th {
+        white-space: nowrap;
+    }
+
+    .table thead th a {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    .sort-caret {
+        opacity: .55;
+    }
+
+    .sort-active .sort-caret {
+        opacity: 1;
+    }
+
+    .table-hover tbody tr:hover {
+        filter: brightness(.98);
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row g-3">
+        <div class="col-12">
+
+            @* Alerts *@
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success d-flex align-items-center gap-2">
+                    <i class="fas fa-check-circle"></i><span>@TempData["Success"]</span>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger d-flex align-items-center gap-2">
+                    <i class="fas fa-times-circle"></i><span>@TempData["Error"]</span>
+                </div>
+            }
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger d-flex align-items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i><span>@ViewBag.Error</span>
+                </div>
+            }
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <h3 class="card-title mb-0">Daftar Employee</h3>
+                        <div class="small text-muted">Pencarian, sortir, dan pagination di server.</div>
+                    </div>
+
+                    <div class="toolbar d-flex flex-wrap align-items-end gap-2">
+                        <form method="get" class="d-flex flex-wrap align-items-end gap-2">
+                            <input type="hidden" name="sortBy" value="@sortBy" />
+                            <input type="hidden" name="sortDir" value="@sortDir" />
+                            <input type="hidden" name="page" value="1" />
+
+                            <div>
+                                <label class="form-label small text-muted">Pencarian</label>
+                                <input class="form-control" type="text" name="q" value="@q"
+                                    placeholder="Cari nama / badge / divisi / departemen" />
+                            </div>
+
+                            <div>
+                                <label class="form-label small text-muted">Urutkan</label>
+                                <select class="form-select" name="sortBy">
+                                    @if (sortBy.Equals("Id", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="Id" selected>ID</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="Id">ID</option>
+                                    }
+                                    @if (sortBy.Equals("Nama", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="Nama" selected>Nama</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="Nama">Nama</option>
+                                    }
+                                    @if (sortBy.Equals("BadgeNumber", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="BadgeNumber" selected>Badge Number</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="BadgeNumber">Badge Number</option>
+                                    }
+                                    @if (sortBy.Equals("Divisi", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="Divisi" selected>Divisi</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="Divisi">Divisi
+                                        </option>
+                                    }
+                                    @if (sortBy.Equals("Departemen", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="Departemen" selected>Departemen</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="Departemen">Departemen</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="form-label small text-muted">Arah</label>
+                                <select class="form-select" name="sortDir">
+                                    @if (sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="ASC" selected>Naik (A→Z)</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="ASC">Naik (A→Z)
+                                        </option>
+                                    }
+                                    @if (sortDir.Equals("DESC", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <option value="DESC" selected>Turun (Z→A)</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="DESC">Turun
+                                            (Z→A)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="form-label small text-muted">Per halaman</label>
+                                <select class="form-select" name="pageSize" onchange="this.form.submit()">
+                                    @if (pageSize == 10)
+                                    {
+                                        <option value="10" selected>10</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="10">10</option>
+                                    }
+                                    @if (pageSize == 20)
+                                    {
+                                        <option value="20" selected>20</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="20">20</option>
+                                    }
+                                    @if (pageSize == 50)
+                                    {
+                                        <option value="50" selected>50</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="50">50</option>
+                                    }
+                                    @if (pageSize == 100)
+                                    {
+                                        <option value="100" selected>100</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="100">100</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="fas fa-search"></i> Terapkan
+                                </button>
+                                <a class="btn btn-light border" href="@Url.Action("Index")">
+                                    <i class="fas fa-undo"></i> Reset
+                                </a>
+                            </div>
+                        </form>
+
+                        <a class="btn btn-primary" href="@Url.Action("Create")">
+                            <i class="fas fa-plus"></i> Tambah
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    @if (items.Count > 0)
+                    {
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                            <div class="small text-muted">
+                                Menampilkan <strong>@startIdx</strong>-<strong>@endIdx</strong> dari <strong>@total</strong>
+                                data.
+                                @if (!string.IsNullOrWhiteSpace(q))
+                                {
+                                    <span class="badge k-chip ms-1"><i class="fas fa-search"></i> Kueri: “@q”</span>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-head">
+                                    <tr>
+                                        <th scope="col">
+                                            <a class="@(sIdAct ? "sort-active" : "")" href="@sIdUrl">
+                                                ID <span class="sort-caret">@(sIdAct? caret : "↕")</span>
+                                            </a>
+                                        </th>
+                                        <th scope="col">
+                                            <a class="@(sNamaAct ? "sort-active" : "")" href="@sNamaUrl">
+                                                Nama <span class="sort-caret">@(sNamaAct? caret : "↕")</span>
+                                            </a>
+                                        </th>
+                                        <th scope="col">
+                                            <a class="@(sBadAct ? "sort-active" : "")" href="@sBadgeUrl">
+                                                Badge <span class="sort-caret">@(sBadAct? caret : "↕")</span>
+                                            </a>
+                                        </th>
+                                        <th scope="col">
+                                            <a class="@(sDivAct ? "sort-active" : "")" href="@sDivUrl">
+                                                Divisi <span class="sort-caret">@(sDivAct? caret : "↕")</span>
+                                            </a>
+                                        </th>
+                                        <th scope="col">
+                                            <a class="@(sDepAct ? "sort-active" : "")" href="@sDepUrl">
+                                                Departemen <span class="sort-caret">@(sDepAct? caret : "↕")</span>
+                                            </a>
+                                        </th>
+                                        <th class="text-end" style="width:170px;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var e in items)
+                                    {
+                                        <tr>
+                                            <td>@e.Id</td>
+                                            <td>@(string.IsNullOrWhiteSpace(e.Nama) ? "-" : e.Nama)</td>
+                                            <td><span class="badge bg-primary">@e.BadgeNumber</span></td>
+                                            <td>@(string.IsNullOrWhiteSpace(e.Divisi) ? "-" : e.Divisi)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(e.Departemen) ? "-" : e.Departemen)</td>
+                                            <td class="text-end">
+                                                <div class="btn-group">
+                                                    <a class="btn btn-sm btn-outline-secondary"
+                                                        href="@Url.Action("Details", new { id = e.Id })" title="Detail">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a class="btn btn-sm btn-warning"
+                                                        href="@Url.Action("Edit", new { id = e.Id })" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger"
+                                                        onclick="confirmDelete(@e.Id, '@(e.Nama ?? e.BadgeNumber)')"
+                                                        title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="small text-muted">
+                                Halaman <strong>@curPage</strong> dari <strong>@totalPages</strong>
+                            </div>
+                            <nav aria-label="Navigasi halaman">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(curPage <= 1 ? "disabled" : "")">
+                                        <a class="page-link" href="@prevUrl" aria-label="Sebelumnya">Prev</a>
+                                    </li>
+
+                                    @if (left > 1)
+                                    {
+                                        <li class="page-item"><a class="page-link" href="@(pg(1))">1</a></li>
+                                        @if (left > 2)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                            ;
+                                        }
+                                    }
+
+                                    @for (int i = left; i <= right; i++)
+                                    {
+                                        <li class="page-item @(i == curPage ? "active" : "")">
+                                            <a class="page-link" href="@(pg(i))">@i</a>
+                                        </li>
+                                    }
+
+                                    @if (right < totalPages)
+                                    {
+                                        @if (right < totalPages - 1)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">…</span></li>
+                                            ;
+                                        }
+                                        <li class="page-item"><a class="page-link" href="@(pg(totalPages))">@totalPages</a></li>
+                                    }
+
+                                    <li class="page-item @(curPage >= totalPages ? "disabled" : "")">
+                                        <a class="page-link" href="@nextUrl" aria-label="Berikutnya">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info d-flex align-items-start gap-2">
+                            <i class="fas fa-info-circle mt-1"></i>
+                            <div>
+                                <div class="fw-semibold">Data tidak ditemukan.</div>
+                                <div class="small">Coba ubah kata kunci, kolom sortir, atau ukuran halaman.</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Delete -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="deleteModalLabel" class="modal-title">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p>Yakin ingin menghapus <strong id="delName"></strong>?</p>
+                <p class="text-danger small mb-0">Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+            <div class="modal-footer">
+                <form id="delForm" method="post">
+                    @Html.AntiForgeryToken()
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            // Modal delete
+            window.confirmDelete = function (id, name) {
+                document.getElementById('delName').textContent = name || ('ID ' + id);
+                const form = document.getElementById('delForm');
+                form.action = '@Url.Action("Delete")/' + id; // Delete POST /Employee/Delete/{id}
+                new bootstrap.Modal(document.getElementById('deleteModal')).show();
+            };
+        })();
+    </script>
+}

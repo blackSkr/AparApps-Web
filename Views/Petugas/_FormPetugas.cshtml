@@ -1,0 +1,26 @@
+@model AparAppsWebsite.Models.PetugasCreateVm
+@{
+    var roles = Model.Roles ?? new List<AparAppsWebsite.Models.RoleItem>();
+}
+
+<div class="mb-3">
+    <label asp-for="EmployeeId" class="form-label">Employee</label>
+    <input type="text" id="employeeSearch" class="form-control mb-2" placeholder="Ketik nama atau badge..."
+        autocomplete="off" disabled />
+    <select asp-for="EmployeeId" class="form-select" id="employeeSelect">
+        <option value="">-- Pilih employee --</option>
+    </select>
+    <span asp-validation-for="EmployeeId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Role</label>
+    <select asp-for="RolePetugasId" class="form-select">
+        <option value="">-- Pilih Role --</option>
+        @foreach (var r in roles)
+        {
+            <option value="@r.Id">@r.Display</option>
+        }
+    </select>
+    <span asp-validation-for="RolePetugasId" class="text-danger"></span>
+</div>

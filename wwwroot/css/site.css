@@ -1,0 +1,104 @@
+:root {
+  --brand: #e43c2f; /* merah KPC */
+  --brand-dark: #b42a20;
+  --ink: #24292e;
+}
+body {
+  background: #f7f8fa;
+  color: var(--ink);
+}
+.navbar-brand img {
+  height: 34px;
+}
+
+.app-shell {
+  display: flex;
+  gap: 0;
+}
+.app-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar {
+  width: 260px;
+  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  border-right: 1px solid #eef0f3;
+  scroll: none;
+}
+.sidebar .nav-link {
+  border-radius: 10px;
+  margin: 4px 8px;
+  padding: 0.6rem 0.85rem;
+  font-weight: 500;
+}
+.sidebar .nav-link.active,
+.sidebar .nav-link:hover {
+  background: #fff3f2;
+  color: var(--brand);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 8px;
+}
+.btn-brand {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+}
+.btn-brand:hover {
+  background: var(--brand-dark);
+  color: #fff;
+}
+
+.card {
+  border: 1px solid #eef0f3;
+  border-radius: 16px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+.badge-soft {
+  background: #f1f3f5;
+  color: #555;
+}
+
+footer {
+  color: #777;
+}
+
+.toast-container {
+  z-index: 1080;
+}
+
+/* Mobile tweaks */
+@media (max-width: 991.98px) {
+  .app-shell {
+    display: block;
+  }
+  .app-main {
+    padding-left: 0;
+  }
+}
+.navbar-toggler {
+  border: none;
+}
+.navbar-toggler:focus {
+  box-shadow: none;
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+.btn-icon:hover {
+  background: #f3f4f6;
+}

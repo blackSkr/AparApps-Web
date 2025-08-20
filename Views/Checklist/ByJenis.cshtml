@@ -1,0 +1,121 @@
+@* Views/Checklist/ByJenis.cshtml *@
+@model List<AparAppsWebsite.Models.Checklist>
+
+@{
+    ViewData["Title"] = $"Checklist - {ViewBag.JenisNama}";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="card-title">Checklist untuk @ViewBag.JenisNama</h3>
+                        <p class="text-muted mb-0">Total: @Model.Count checklist items</p>
+                    </div>
+                    <div class="btn-group">
+                        <a href="@Url.Action("Create")" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Tambah
+                        </a>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="fas fa-list"></i> Semua Checklist
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="alert alert-danger">
+                            @ViewBag.Error
+                        </div>
+                    }
+
+                    @if (Model.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="80">#</th>
+                                        <th>Pertanyaan Checklist</th>
+                                        <th width="150">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < Model.Count; i++)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-primary">@(i + 1)</span>
+                                            </td>
+                                            <td>@Model[i].Pertanyaan</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="@Url.Action("Edit", new { id = Model[i].Id })"
+                                                        class="btn btn-sm btn-warning">
+                                                        Edit
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger"
+                                                        onclick="confirmDelete(@Model[i].Id, '@Html.Raw(Html.Encode(Model[i].Pertanyaan))')">
+                                                        Hapus
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Belum ada checklist untuk
+                            <strong>@ViewBag.JenisNama</strong>.
+                            <br><a href="@Url.Action("Create")" class="alert-link">Tambah checklist pertama</a> atau gunakan
+                            <a href="@Url.Action("Bulk")" class="alert-link">Bulk Create</a>.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Konfirmasi Delete -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Apakah Anda yakin ingin menghapus checklist:</p>
+                <blockquote class="blockquote">
+                    <p id="deleteChecklistQuestion" class="mb-0"></p>
+                </blockquote>
+                <p class="text-danger mt-2"><small>Data yang sudah dihapus tidak dapat dikembalikan.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <form id="deleteForm" method="post" style="display: inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(id, question) {
+            document.getElementById('deleteChecklistQuestion').textContent = question;
+            document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + id;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+    </script>
+}

@@ -1,0 +1,331 @@
+@using AparAppsWebsite.Models
+@model PagedResult<RolePetugas>
+
+@{
+    ViewData["Title"] = "Daftar Role Petugas";
+
+    var items      = Model?.Items?.ToList() ?? new List<RolePetugas>();
+    var pageSize   = Model?.PageSize ?? items.Count;
+    var total      = Model?.TotalItems ?? items.Count;
+    var current    = Model?.Page ?? 1;
+    var totalPages = Model?.TotalPages ?? 1;
+    var q          = ViewBag.Query as string ?? "";
+
+    // ringkasan per status (berdasarkan halaman yang sedang ditampilkan)
+    var aktifCount    = items.Count(x => x.IsActive);
+    var nonaktifCount = items.Count - aktifCount;
+
+    string BadgeStatus(bool isActive) => isActive ? "success" : "secondary";
+    string LabelStatus(bool isActive) => isActive ? "Aktif" : "Nonaktif";
+
+    string BuildPageUrl(int p)
+        => $"?q={Uri.EscapeDataString(q ?? string.Empty)}&page={p}&pageSize={pageSize}";
+}
+
+<style>
+    .toolbar .form-control, .toolbar .form-select { min-width: 200px; }
+    .toolbar .btn { border-radius:.45rem; }
+    .k-chip { font-size:.8rem; border:1px solid rgba(0,0,0,.06); background: var(--bs-light); }
+    .table thead th { white-space:nowrap; }
+    .sticky-head th { position: sticky; top: 0; z-index: 2; background: var(--bs-body-bg); }
+    .table-hover tbody tr:hover { filter: brightness(.98); }
+    .badge-soft { background: rgba(0,0,0,.05); border:1px solid rgba(0,0,0,.06); color: inherit; }
+    .row-nonaktif { background: rgba(108,117,125,.06); }
+    .row-aktif    { background: rgba(25,135,84,.04); }
+</style>
+
+<div class="container-fluid">
+    <div class="row g-3">
+        <div class="col-12">
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div>
+                            <h3 class="card-title mb-0">Daftar Role Petugas</h3>
+                            <div class="small text-muted">Kelola role, interval pemeriksaan, dan status keaktifan.</div>
+                        </div>
+                        <span class="badge bg-secondary" id="countBadge">@total data</span>
+                        @* <span class="badge k-chip">Halaman: @current/@totalPages</span>
+                        <span class="badge k-chip">Per halaman: @pageSize</span> *@
+                    </div>
+                    <a href="@Url.Action("Create")" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Tambah Role
+                    </a>
+                </div>
+
+                <div class="card-body">
+                    @* Alerts *@
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2">
+                            <i class="fas fa-exclamation-triangle"></i><span>@ViewBag.Error</span>
+                        </div>
+                    }
+                    @if (TempData["Success"] != null)
+                    {
+                        <div class="alert alert-success d-flex align-items-center gap-2">
+                            <i class="fas fa-check-circle"></i><span>@TempData["Success"]</span>
+                        </div>
+                    }
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2">
+                            <i class="fas fa-times-circle"></i><span>@TempData["Error"]</span>
+                        </div>
+                    }
+
+                    @* Toolbar Pencarian & Filter *@
+                    <div class="toolbar d-flex flex-wrap align-items-end gap-2 mb-3">
+                        <div class="input-group" style="max-width:420px;">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input id="searchInput" type="text" class="form-control" placeholder="Cari nama role / deskripsi" value="@q">
+                        </div>
+
+                        <select id="intervalFilter" class="form-select">
+                            <option value="">Semua Interval</option>
+                            @if (ViewBag.IntervalList != null)
+                            {
+                                foreach (var it in (IEnumerable<DropdownItem>)ViewBag.IntervalList)
+                                {
+                                    <option value="@it.Nama">@it.Nama</option>
+                                }
+                            }
+                        </select>
+
+                        <select id="statusFilter" class="form-select">
+                            <option value="">Semua Status</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Nonaktif">Nonaktif</option>
+                        </select>
+
+                        <button id="resetBtn" class="btn btn-light border">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+
+                        <div class="ms-auto d-flex flex-wrap gap-2">
+                            <span class="badge bg-success">Aktif: @aktifCount</span>
+                            <span class="badge bg-secondary">Nonaktif: @nonaktifCount</span>
+                            @if (!string.IsNullOrWhiteSpace(q))
+                            {
+                                <span class="badge k-chip"><i class="fas fa-search"></i> Kueri: “@q”</span>
+                            }
+                        </div>
+                    </div>
+
+                    @if (items.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="roleTable">
+                                <thead class="table-light sticky-head">
+                                    <tr>
+                                        <th width="70">ID</th>
+                                        <th width="260">Nama Role</th>
+                                        <th width="220">Interval</th>
+                                        <th width="120">Status</th>
+                                        <th>Deskripsi</th>
+                                        <th width="170" class="text-end">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var x in items)
+                                    {
+                                        var intervalLabel = !string.IsNullOrWhiteSpace(x.IntervalNama)
+                                            ? (x.Bulan.HasValue ? $"{x.IntervalNama} ({x.Bulan} bln)" : x.IntervalNama)
+                                            : "";
+                                        var statusLabel = x.IsActive ? "Aktif" : "Nonaktif";
+                                        var rowClass = x.IsActive ? "row-aktif" : "row-nonaktif";
+
+                                        <tr class="@rowClass" data-interval="@intervalLabel" data-status="@statusLabel">
+                                            <td>@x.Id</td>
+                                            <td class="fw-semibold">@x.NamaRole</td>
+                                            <td>
+                                                @if (!string.IsNullOrWhiteSpace(intervalLabel))
+                                                {
+                                                    <span class="badge bg-info text-dark">@intervalLabel</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-@BadgeStatus(x.IsActive)">@LabelStatus(x.IsActive)</span>
+                                            </td>
+                                            <td>
+                                                <small>@(string.IsNullOrWhiteSpace(x.Deskripsi) ? "-" : x.Deskripsi)</small>
+                                            </td>
+                                            <td class="text-end">
+                                                <div class="btn-group" role="group">
+                                                    <a href="@Url.Action("Details", new { id = x.Id })"
+                                                       class="btn btn-sm btn-outline-secondary" title="Detail">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a href="@Url.Action("Edit", new { id = x.Id })"
+                                                       class="btn btn-sm btn-warning" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-danger"
+                                                            onclick="confirmDelete(@x.Id, '@x.NamaRole')" title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @* Pagination *@
+                        @if (totalPages > 1)
+                        {
+                            <nav aria-label="pagination" class="mt-3">
+                                <ul class="pagination mb-0">
+                                    <li class="page-item @(current <= 1 ? "disabled" : "")">
+                                        <a class="page-link" href="@BuildPageUrl(current - 1)" aria-label="Sebelumnya">Prev</a>
+                                    </li>
+
+                                    @{
+                                        int left = Math.Max(1, current - 2);
+                                        int right = Math.Min(totalPages, current + 2);
+
+                                        if (left > 1)
+                                        {
+                                            <li class="page-item"><a class="page-link" href="@BuildPageUrl(1)">1</a></li>
+                                            if (left > 2) { <li class="page-item disabled"><span class="page-link">…</span></li>; }
+                                        }
+
+                                        for (int i = left; i <= right; i++)
+                                        {
+                                            <li class="page-item @(i == current ? "active" : "")">
+                                                <a class="page-link" href="@BuildPageUrl(i)">@i</a>
+                                            </li>
+                                        }
+
+                                        if (right < totalPages)
+                                        {
+                                            if (right < totalPages - 1) { <li class="page-item disabled"><span class="page-link">…</span></li>; }
+                                            <li class="page-item"><a class="page-link" href="@BuildPageUrl(totalPages)">@totalPages</a></li>
+                                        }
+                                    }
+
+                                    <li class="page-item @(current >= totalPages ? "disabled" : "")">
+                                        <a class="page-link" href="@BuildPageUrl(current + 1)" aria-label="Berikutnya">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+                    }
+                    else
+                    {
+                        <div class="alert alert-info d-flex align-items-start gap-2">
+                            <i class="fas fa-info-circle mt-1"></i>
+                            <div>
+                                <div class="fw-semibold">Belum ada data role petugas.</div>
+                                <div class="small">Klik <em>Tambah Role</em> untuk menambahkan data.</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Modal Konfirmasi Delete -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+                <p>Hapus role <strong id="deleteRoleName"></strong>?</p>
+                <p class="text-danger"><small>Tindakan ini tidak dapat dibatalkan.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <form id="deleteForm" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger">Hapus</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const $search   = document.getElementById('searchInput');
+    const $interval = document.getElementById('intervalFilter');
+    const $status   = document.getElementById('statusFilter');
+    const $reset    = document.getElementById('resetBtn');
+    const $table    = document.getElementById('roleTable');
+    const $rows     = Array.from($table?.querySelectorAll('tbody tr') || []);
+    const $count    = document.getElementById('countBadge');
+
+    // Isi pilihan interval dari tabel jika server tidak mengirim list
+    (function hydrateInterval() {
+        const hasServerOptions = $interval && $interval.options.length > 1;
+        if (!hasServerOptions && $interval) {
+            const uniq = Array.from(new Set($rows.map(tr => tr.getAttribute('data-interval')).filter(Boolean)))
+                .sort((a, b) => a.localeCompare(b));
+            uniq.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                $interval.appendChild(opt);
+            });
+        }
+    })();
+
+    function applyFilter() {
+        const q  = ($search?.value || '').toLowerCase();
+        const fi = $interval?.value || '';
+        const fs = $status?.value || '';
+
+        let visible = 0;
+
+        $rows.forEach(tr => {
+            const cols = tr.querySelectorAll('td');
+            const nama = (cols[1]?.innerText || '').toLowerCase();
+            const desc = (cols[4]?.innerText || '').toLowerCase();
+            const ival = tr.getAttribute('data-interval') || '';
+            const stat = tr.getAttribute('data-status') || '';
+
+            const matchText  = !q  || nama.includes(q) || desc.includes(q);
+            const matchInt   = !fi || ival === fi;
+            const matchStat  = !fs || stat === fs;
+
+            const show = matchText && matchInt && matchStat;
+            tr.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        if ($count) $count.textContent = `${visible} data`;
+    }
+
+    $search?.addEventListener('input', applyFilter);
+    $interval?.addEventListener('change', applyFilter);
+    $status?.addEventListener('change', applyFilter);
+    $reset?.addEventListener('click', () => {
+        if ($search)   $search.value = '';
+        if ($interval) $interval.value = '';
+        if ($status)   $status.value = '';
+        applyFilter();
+    });
+
+    applyFilter();
+
+    // Konfirmasi hapus
+    window.confirmDelete = function(id, namaRole) {
+        document.getElementById('deleteRoleName').textContent = namaRole || ('ID ' + id);
+        document.getElementById('deleteForm').action = '@Url.Action("Delete")/' + id;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    };
+})();
+</script>
+}

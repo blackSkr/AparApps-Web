@@ -1,0 +1,441 @@
+@model List<AparAppsWebsite.Models.Maintenance>
+@{
+    ViewData["Title"] = "Maintenance History";
+
+    var total = Model?.Count ?? 0;
+    var overdue = Model?.Count(x => x.IsOverdue) ?? 0;
+    var dueSoon = Model?.Count(x => x.IsDueSoon) ?? 0;
+    var ok = total - overdue - dueSoon;
+
+    int pct(int part, int whole) => whole > 0 ? (int)Math.Round(100.0 * part / whole) : 0;
+    var pOverdue = pct(overdue, total);
+    var pSoon = pct(dueSoon, total);
+    var pOk = pct(ok, total);
+}
+
+<style>
+    .page-actions .btn {
+        border-radius: .5rem;
+    }
+
+    .kpi-card {
+        border: 1px solid rgba(0, 0, 0, .05);
+    }
+
+    .kpi-label {
+        font-size: .8rem;
+        color: var(--bs-secondary-color, #6c757d);
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .progress-thin {
+        height: .45rem;
+    }
+
+    .legend .badge {
+        font-weight: 500;
+    }
+
+    .table thead th {
+        white-space: nowrap;
+        cursor: pointer;
+    }
+
+    .table thead th .sort-ind {
+        opacity: .4;
+        font-size: .8rem;
+        margin-left: .2rem;
+    }
+
+    .row-status-overdue {
+        background: rgba(220, 53, 69, .04);
+    }
+
+    .row-status-duesoon {
+        background: rgba(255, 193, 7, .06);
+    }
+
+    .row-status-ok {
+        background: rgba(25, 135, 84, .03);
+    }
+
+    .sticky-tools {
+        position: sticky;
+        top: .5rem;
+        z-index: 100;
+    }
+
+    .filter-chip {
+        font-size: .8rem;
+        border: 1px solid rgba(0, 0, 0, .06);
+        background: var(--bs-light);
+    }
+
+    .table thead.sticky-head th {
+        position: sticky;
+        top: 0;
+        background: var(--bs-body-bg);
+        z-index: 5;
+    }
+
+    .table-hover tbody tr:hover {
+        filter: brightness(.98);
+    }
+
+    .badge-soft {
+        background: rgba(0, 0, 0, .05);
+        border: 1px solid rgba(0, 0, 0, .06);
+        color: inherit;
+    }
+
+    @@media (max-width: 991.98px) {
+        .sticky-tools {
+            position: static;
+        }
+    }
+
+    /* Razor-safe @@media */
+</style>
+
+<div class="container-fluid">
+    <div class="row g-3">
+        <div class="col-12 d-flex align-items-center justify-content-between">
+            <div>
+                <h3 class="mb-0">Riwayat Maintenance</h3>
+                <div class="small text-muted">Ringkasan pemeriksaan & status jatuh tempo</div>
+            </div>
+            <div class="page-actions d-flex gap-2">
+                @if (ViewBag.AparId != null)
+                {
+                    <a class="btn btn-primary" href="@Url.Action("Create", new { id = Convert.ToInt32(ViewBag.AparId) })">
+                        <i class="fas fa-plus"></i> Pemeriksaan Baru
+                    </a>
+                }
+                <button id="btnExport" class="btn btn-outline-secondary">
+                    <i class="fas fa-file-export"></i> Export CSV
+                </button>
+            </div>
+        </div>
+
+        <hr class="my-0" />
+
+        <!-- KPI -->
+        <div class="col-md-3 col-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="kpi-label">Total</div>
+                    <div class="h3 mb-2">@total</div>
+                    <div class="progress progress-thin">
+                        <div class="progress-bar" style="width:100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="kpi-label">Overdue</div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <div class="h3 mb-0 text-danger">@overdue</div>
+                        <div class="text-danger small">(@pOverdue%)</div>
+                    </div>
+                    <div class="progress progress-thin">
+                        <div class="progress-bar bg-danger" style="width:@pOverdue%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="kpi-label">Due Soon (≤7 hari)</div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <div class="h3 mb-0 text-warning">@dueSoon</div>
+                        <div class="text-warning small">(@pSoon%)</div>
+                    </div>
+                    <div class="progress progress-thin">
+                        <div class="progress-bar bg-warning" style="width:@pSoon%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card kpi-card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="kpi-label">OK</div>
+                    <div class="d-flex align-items-baseline gap-2">
+                        <div class="h3 mb-0 text-success">@ok</div>
+                        <div class="text-success small">(@pOk%)</div>
+                    </div>
+                    <div class="progress progress-thin">
+                        <div class="progress-bar bg-success" style="width:@pOk%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Pencarian</label>
+                            <input id="searchBox" class="form-control" placeholder="Cari kode / lokasi / jenis…">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Status Due</label>
+                            <select id="statusSelect" class="form-select">
+                                <option value="">Semua Status Due</option>
+                                <option value="overdue">Overdue</option>
+                                <option value="duesoon">Due Soon</option>
+                                <option value="ok">OK</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">Dari Tanggal</label>
+                            <input id="dateFrom" type="date" class="form-control">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">Sampai Tanggal</label>
+                            <input id="dateTo" type="date" class="form-control">
+                        </div>
+                        <div class="col-md-2 d-grid">
+                            <button id="btnReset" class="btn btn-light border sticky-tools">
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 legend d-flex flex-wrap gap-2">
+                        @* <span class="badge filter-chip"><i class="fas fa-search"></i> Filter aktif muncul sebagai hasil di tabel</span> *@
+                        <span class="badge bg-danger">Overdue</span>
+                        <span class="badge bg-warning text-dark">Due Soon</span>
+                        <span class="badge bg-success">OK</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    @if (ViewBag.Error != null)
+                    {
+                        <div class="alert alert-danger"><i class="fas fa-times-circle"></i> @ViewBag.Error</div>
+                    }
+                    else if ((Model?.Count ?? 0) == 0)
+                    {
+                        <div class="alert alert-info d-flex align-items-start gap-2">
+                            <i class="fas fa-info-circle mt-1"></i>
+                            <div>
+                                <div class="fw-semibold">Belum ada data maintenance.</div>
+                                <div class="small">Klik <em>Pemeriksaan Baru</em> untuk menambahkan pemeriksaan pertama.
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table id="tblMaint" class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-head">
+                                    <tr>
+                                        <th data-sort="kode">Kode <span class="sort-ind">↕</span></th>
+                                        <th data-sort="tgl">Tanggal Pemeriksaan <span class="sort-ind">↕</span></th>
+                                        <th data-sort="lokasi">Lokasi <span class="sort-ind">↕</span></th>
+                                        <th data-sort="jenis">Jenis <span class="sort-ind">↕</span></th>
+                                        <th>Kondisi</th>
+                                        <th data-sort="due">Next Due <span class="sort-ind">↕</span></th>
+                                        <th>Status</th>
+                                        <th class="text-end">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var m in Model.OrderByDescending(x => x.TanggalPemeriksaan))
+                                    {
+                                        var rowClass = m.IsOverdue ? "row-status-overdue"
+                                        : m.IsDueSoon ? "row-status-duesoon" : "row-status-ok";
+                                        <tr class="@rowClass" data-kode="@m.AparKode" data-lokasi="@m.LokasiNama"
+                                            data-jenis="@m.JenisNama" data-tgl="@m.TanggalPemeriksaan.ToString("yyyy-MM-dd")"
+                                            data-due="@m.NextDueDate.ToString("yyyy-MM-dd")"
+                                            data-status="@(m.IsOverdue ? "overdue" : m.IsDueSoon ? "duesoon" : "ok")">
+                                            <td><span class="badge bg-primary">@m.AparKode</span></td>
+                                            <td>
+                                                <span class="d-block">@m.TanggalPemeriksaan.ToString("dd MMM yyyy")</span>
+                                                <span class="text-muted small">@m.TanggalPemeriksaan.ToString("HH:mm")</span>
+                                            </td>
+                                            <td><span class="badge bg-secondary">@m.LokasiNama</span></td>
+                                            <td><span class="badge bg-info text-dark">@m.JenisNama</span></td>
+                                            <td><span class="badge bg-@m.KondisiBadge">@m.Kondisi</span></td>
+                                            <td>
+                                                @(m.NextDueDate == default
+                                                                                        ? Html.Raw("<span class='text-muted'>-</span>")
+                                                                                        : Html.Raw($"<span>{m.NextDueDate:dd MMM yyyy}</span>"))
+                                            </td>
+                                            <td><span class="badge bg-@m.StatusBadge">@m.StatusText</span></td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-primary"
+                                                    href="@Url.Action("Details", new { id = m.Id })" title="Lihat detail">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="small text-muted mt-2">Menampilkan <span id="shownCount">@total</span> dari @total
+                            entri.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const $ = s => document.querySelector(s);
+            const $$ = s => Array.from(document.querySelectorAll(s));
+
+            const tbl = $('#tblMaint');
+            const tbody = tbl ? tbl.querySelector('tbody') : null;
+
+            const searchBox = $('#searchBox');
+            const statusSel = $('#statusSelect');
+            const df = $('#dateFrom'), dt = $('#dateTo');
+            const btnReset = $('#btnReset');
+            const btnExport = $('#btnExport');
+            const shownCount = $('#shownCount');
+
+            function parseDate(str) { // yyyy-MM-dd -> Date
+                if (!str) return null;
+                const [y, m, d] = str.split('-').map(Number);
+                return new Date(y, (m || 1) - 1, d || 1);
+            }
+
+            function applyFilter() {
+                if (!tbody) return;
+                const qtext = (searchBox?.value || '').toLowerCase();
+                const st = statusSel?.value || '';
+                const dfrom = df?.value ? parseDate(df.value) : null;
+                const dto = dt?.value ? parseDate(dt.value) : null;
+
+                let visible = 0;
+                $$('#tblMaint tbody tr').forEach(tr => {
+                    const kode = (tr.dataset.kode || '').toLowerCase();
+                    const lokasi = (tr.dataset.lokasi || '').toLowerCase();
+                    const jenis = (tr.dataset.jenis || '').toLowerCase();
+                    const tgl = parseDate(tr.dataset.tgl);
+                    const sts = tr.dataset.status;
+
+                    let ok = true;
+                    if (qtext) ok = (kode.includes(qtext) || lokasi.includes(qtext) || jenis.includes(qtext));
+                    if (ok && st) ok = (sts === st);
+                    if (ok && dfrom && tgl) ok = (tgl >= dfrom);
+                    if (ok && dto && tgl) ok = (tgl <= dto);
+
+                    tr.style.display = ok ? '' : 'none';
+                    if (ok) visible++;
+                });
+                if (shownCount) shownCount.textContent = visible;
+            }
+
+            function resetFilter() {
+                if (searchBox) searchBox.value = '';
+                if (statusSel) statusSel.value = '';
+                if (df) df.value = '';
+                if (dt) dt.value = '';
+                applyFilter();
+            }
+
+            // Simple sort (client-side)
+            let sortState = { key: 'tgl', dir: 'desc' }; // default
+            function sortBy(key) {
+                if (!tbody) return;
+                sortState.dir = (sortState.key === key && sortState.dir === 'asc') ? 'desc' : 'asc';
+                sortState.key = key;
+
+                const rows = $$('#tblMaint tbody tr');
+                const getVal = tr => {
+                    switch (key) {
+                        case 'kode': return (tr.dataset.kode || '');
+                        case 'lokasi': return (tr.dataset.lokasi || '');
+                        case 'jenis': return (tr.dataset.jenis || '');
+                        case 'tgl': return tr.dataset.tgl || '';
+                        case 'due': return tr.dataset.due || '';
+                        default: return '';
+                    }
+                };
+                rows.sort((a, b) => {
+                    const va = getVal(a), vb = getVal(b);
+                    // date-aware when key is tgl/due (yyyy-MM-dd comparable string)
+                    if (key === 'tgl' || key === 'due') {
+                        if (va === vb) return 0;
+                        return (sortState.dir === 'asc') ? va.localeCompare(vb) : vb.localeCompare(va);
+                    }
+                    // text compare
+                    const cmp = va.localeCompare(vb);
+                    return (sortState.dir === 'asc') ? cmp : -cmp;
+                });
+                rows.forEach(r => tbody.appendChild(r));
+            }
+
+            function initSortHeaders() {
+                $$('#tblMaint thead th[data-sort]').forEach(th => {
+                    th.addEventListener('click', () => {
+                        sortBy(th.dataset.sort);
+                        applyFilter(); // keep filter after sort
+                    });
+                });
+                // initial sort by date desc (already server-ordered, but ensure state)
+                sortBy('tgl');
+            }
+
+            function exportCSV() {
+                if (!tbody) return;
+                // Only export visible rows
+                const visibleRows = $$('#tblMaint tbody tr').filter(tr => tr.style.display !== 'none');
+                const header = ['Kode', 'Tanggal Pemeriksaan', 'Lokasi', 'Jenis', 'Kondisi', 'Next Due', 'Status'];
+                const lines = [header.join(',')];
+
+                const esc = v => {
+                    if (v == null) return '';
+                    const s = String(v).replace(/"/g, '""');
+                    return /[",\n]/.test(s) ? `"${s}"` : s;
+                };
+
+                visibleRows.forEach(tr => {
+                    const tds = tr.querySelectorAll('td');
+                    const kode = tds[0]?.innerText.trim();
+                    const tgl = tds[1]?.querySelector('span')?.innerText.trim() || tds[1]?.innerText.trim();
+                    const lokasi = tds[2]?.innerText.trim();
+                    const jenis = tds[3]?.innerText.trim();
+                    const kondisi = tds[4]?.innerText.trim();
+                    const due = tds[5]?.innerText.trim();
+                    const status = tds[6]?.innerText.trim();
+                    lines.push([kode, tgl, lokasi, jenis, kondisi, due, status].map(esc).join(','));
+                });
+
+                const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+                a.href = url; a.download = `maintenance-history-${ts}.csv`;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 500);
+            }
+
+            // Events
+            [searchBox, statusSel, df, dt].forEach(el => el && el.addEventListener('input', applyFilter));
+            if (btnReset) btnReset.addEventListener('click', resetFilter);
+            if (btnExport) btnExport.addEventListener('click', exportCSV);
+
+            if (tbl) { initSortHeaders(); applyFilter(); }
+        })();
+    </script>
+}

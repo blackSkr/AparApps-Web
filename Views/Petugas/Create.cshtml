@@ -1,0 +1,72 @@
+@model AparAppsWebsite.Models.PetugasCreateVm
+@{
+    ViewData["Title"] = "Tambah Petugas";
+}
+<partial name="~/Views/Shared/_Alerts.cshtml" />
+<h2 class="mb-3">Tambah Petugas</h2>
+
+<form asp-action="Create" method="post">
+    <partial name="~/Views/Petugas/_FormPetugas.cshtml" model="Model" />
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary">Simpan</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Batal</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const sel = document.getElementById('employeeSelect');
+            const box = document.getElementById('employeeSearch');
+            if (!sel || !box) return;
+            let typingTimer, lastQuery = "";
+            const cache = new Map();
+
+            function renderOptions(items) {
+                sel.querySelectorAll('option:not(:first-child)').forEach(o => o.remove());
+                cache.clear();
+                if (!items.length) {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.textContent = 'Tidak ada hasil';
+                    opt.disabled = true;
+                    sel.appendChild(opt);
+                    return;
+                }
+                for (const it of items) {
+                    cache.set(String(it.id), it);
+                    const opt = document.createElement('option');
+                    opt.value = it.id;
+                    opt.textContent = it.text;
+                    sel.appendChild(opt);
+                }
+            }
+
+            async function fetchEmployees(q) {
+                const url = `/Petugas/EmployeeLookup?q=${encodeURIComponent(q || '')}&limit=20`;
+                try {
+                    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!resp.ok) return [];
+                    const data = await resp.json();
+                    return Array.isArray(data) ? data : [];
+                } catch { return []; }
+            }
+
+            async function doSearch(q) {
+                if (q === lastQuery && sel.options.length > 1) return;
+                lastQuery = q;
+                const items = await fetchEmployees(q);
+                renderOptions(items);
+            }
+
+            box.addEventListener('input', () => {
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => doSearch(box.value.trim()), 250);
+            });
+
+            // load awal
+            doSearch("");
+        })();
+    </script>
+}

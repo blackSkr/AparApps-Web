@@ -1,0 +1,50 @@
+@model AparAppsWebsite.Models.Peralatan
+@{
+    var lokasiList = ViewBag.LokasiList as List<AparAppsWebsite.Models.DropdownItem> ?? new();
+    var jenisList = ViewBag.JenisList as List<AparAppsWebsite.Models.DropdownItem> ?? new();
+}
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="mb-3">
+    <label class="form-label">Kode</label>
+    <input asp-for="Kode" class="form-control" />
+    <span asp-validation-for="Kode" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Lokasi</label>
+    <select asp-for="LokasiId" class="form-select">
+        <option value="">-- Pilih Lokasi --</option>
+        @foreach (var l in lokasiList)
+        {
+            <option value="@l.Id" selected="@(Model?.LokasiId == l.Id)">
+                @l.Nama
+            </option>
+        }
+    </select>
+    <span asp-validation-for="LokasiId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Jenis</label>
+    <select asp-for="JenisId" class="form-select">
+        <option value="">-- Pilih Jenis --</option>
+        @foreach (var j in jenisList)
+        {
+            <option value="@j.Id" selected="@(Model?.JenisId == j.Id)">
+                @j.Nama
+            </option>
+        }
+    </select>
+    <span asp-validation-for="JenisId" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Spesifikasi</label>
+    <textarea asp-for="Spesifikasi" class="form-control" rows="4"></textarea>
+    <span asp-validation-for="Spesifikasi" class="text-danger"></span>
+</div>
+
+@* contoh hidden/field tambahan kalau dipakai *@
+@* <input asp-for="TokenQR" type="hidden" /> *@

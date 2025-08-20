@@ -1,0 +1,66 @@
+@model AparAppsWebsite.Models.Peralatan
+@{
+  ViewData["Title"] = "Edit Peralatan";
+  var apiBase = (string?)ViewBag.ApiBase ?? "";
+  var fotos = Model.FotoUrls ?? new List<string>();
+
+  if (!fotos.Any() && !string.IsNullOrWhiteSpace(Model.FotoPath))
+  {
+    var parts = (Model.FotoPath ?? "")
+    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    fotos = parts
+    .Select(p => p.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? p : $"{apiBase}{p}")
+    .ToList();
+  }
+}
+
+<partial name="~/Views/Shared/_Alerts.cshtml" />
+
+<h2 class="mb-3">Edit Peralatan - @Model.Kode</h2>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="mb-4">
+  @Html.AntiForgeryToken()
+  <partial name="_Form" model="Model" />
+
+  <div class="mb-3">
+    <label class="form-label">Tambah Foto</label>
+    <input type="file" name="files" class="form-control" multiple />
+    <div class="form-check mt-2">
+      <input class="form-check-input" type="checkbox" id="replacePhotos" name="replacePhotos" value="true" />
+      <label for="replacePhotos" class="form-check-label">Ganti total foto (bukan tambah)</label>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">Simpan</button>
+    <a asp-action="Index" class="btn btn-outline-secondary">Kembali</a>
+  </div>
+</form>
+
+@if (fotos.Any())
+{
+  <h5>Foto Saat Ini</h5>
+  <div class="row row-cols-2 row-cols-md-4 g-3">
+    @foreach (var url in fotos)
+    {
+      <div class="col">
+        <div class="card">
+          <img class="card-img-top" src="@url" style="height:180px;object-fit:cover;" />
+          <div class="card-body">
+            <form asp-action="DeletePhoto" method="post" onsubmit="return confirm('Hapus foto ini?');">
+              @Html.AntiForgeryToken()
+              <input type="hidden" name="id" value="@Model.Id" />
+              <input type="hidden" name="path" value="@url.Replace((string)ViewBag.ApiBase, "")" />
+              <button class="btn btn-sm btn-outline-danger w-100" type="submit">Hapus</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+@section Scripts {
+  <partial name="_ValidationScriptsPartial" />
+}
