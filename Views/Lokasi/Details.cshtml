@@ -1,30 +1,319 @@
 @model AparAppsWebsite.Models.LokasiFormVM
+@using System.Globalization
 
-<h2>Detail Lokasi</h2>
+@{
+  ViewData["Title"] = "Detail Lokasi";
 
-<dl class="row">
-  <dt class="col-sm-3">Nama</dt>
-  <dd class="col-sm-9">@Model.Nama</dd>
-  <dt class="col-sm-3">Koordinat</dt>
-  <dd class="col-sm-9">@Model.lat, @Model.Longitude</dd>
-</dl>
+  string fmt6(double? v) => v.HasValue ? v.Value.ToString("0.000000", CultureInfo.InvariantCulture) : "-";
+  var lat6 = fmt6(Model.lat);
+  var lon6 = fmt6(Model.Longitude);
 
-<h4 class="mt-4">PIC di Lokasi</h4>
-@if (!(Model.CurrentPetugas?.Any() ?? false))
-{
-  <div class="text-muted">Belum ada petugas.</div>
+  // Link siap pakai
+  var gmapsUrl = (Model.lat.HasValue && Model.Longitude.HasValue)
+  ? $"https://www.google.com/maps/search/?api=1&query={lat6},{lon6}"
+  : "#";
+
+  var osmUrl = (Model.lat.HasValue && Model.Longitude.HasValue)
+  ? $"https://www.openstreetmap.org/?mlat={lat6}&mlon={lon6}#map=18/{lat6}/{lon6}"
+  : "#";
+
+  var appleMapsUrl = (Model.lat.HasValue && Model.Longitude.HasValue)
+  ? $"https://maps.apple.com/?ll={lat6},{lon6}&q={Uri.EscapeDataString(Model.Nama ?? "Lokasi")}"
+  : "#";
 }
-else
-{
-  <ul class="list-group">
-    @foreach (var p in Model.CurrentPetugas)
-    {
-      <li class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-          <strong>@(p.Nama ?? "-")</strong>
-          <span class="text-muted">(@p.BadgeNumber) — @(p.Role ?? "-")</span>
-        </div>
-      </li>
+
+<style>
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .badge-soft {
+    background: #f1f3f5;
+    color: #495057;
+    border: 1px solid #e9ecef;
+    padding: .35rem .6rem;
+    border-radius: .5rem;
+    font-size: .8rem;
+  }
+
+  .map-preview {
+    height: 360px;
+    border-radius: .75rem;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+    background: #f8f9fa;
+  }
+
+  .copy-btn {
+    border: 1px solid #ced4da;
+    background: #fff;
+    padding: .25rem .5rem;
+    border-radius: .375rem;
+    cursor: pointer;
+  }
+
+  .copy-btn:hover {
+    background: #f1f3f5;
+  }
+
+  .kv {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: .5rem 1rem;
+    align-items: start;
+  }
+
+  @@media (max-width: 576px) {
+    .kv {
+      grid-template-columns: 1fr;
     }
-  </ul>
+  }
+
+  .kv dt {
+    color: #6c757d;
+    font-weight: 600;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 1.25rem 0 .75rem;
+  }
+</style>
+
+<div class="page-header">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a asp-action="Index">Lokasi</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Detail</li>
+      </ol>
+    </nav>
+    <h2 class="mb-0">@(!string.IsNullOrWhiteSpace(Model.Nama) ? Model.Nama : "—")</h2>
+  </div>
+  <div class="d-flex gap-2">
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Edit</a>
+    <form asp-action="Delete" method="post"
+      onsubmit="return confirm('Yakin hapus lokasi ini? Tindakan tidak bisa dibatalkan.');" class="d-inline">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.Id" />
+      <button class="btn btn-outline-danger">Hapus</button>
+    </form>
+    <a asp-action="Index" class="btn btn-outline-secondary">Kembali</a>
+  </div>
+</div>
+
+<partial name="~/Views/Shared/_Alerts.cshtml" />
+
+<div class="row g-3">
+  <!-- Kolom kiri: Info -->
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-title">Informasi Lokasi</div>
+        <dl class="kv">
+          <dt>Nama</dt>
+          <dd>@(Model.Nama ?? "—")</dd>
+
+          <dt>Latitude</dt>
+          <dd class="d-flex align-items-center gap-2">
+            <span id="val-lat">@lat6</span>
+            @if (Model.lat.HasValue)
+            {
+              <button type="button" class="copy-btn" data-copy="#val-lat" title="Copy latitude">Copy</button>
+            }
+          </dd>
+
+          <dt>Longitude</dt>
+          <dd class="d-flex align-items-center gap-2">
+            <span id="val-lon">@lon6</span>
+            @if (Model.Longitude.HasValue)
+            {
+              <button type="button" class="copy-btn" data-copy="#val-lon" title="Copy longitude">Copy</button>
+            }
+          </dd>
+
+          <dt>Koordinat (Pair)</dt>
+          <dd class="d-flex flex-wrap align-items-center gap-2">
+            <span id="val-pair">@lat6, @lon6</span>
+            @if (Model.lat.HasValue && Model.Longitude.HasValue)
+            {
+              <button type="button" class="copy-btn" data-copy="#val-pair" title="Copy lat,lon">Copy</button>
+            }
+          </dd>
+
+          <dt>Format DMS</dt>
+          <dd>
+            <div id="val-dms" class="text-mono small">—</div>
+          </dd>
+
+          <dt>Tautan Peta</dt>
+          <dd class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="@gmapsUrl" target="_blank" rel="noopener">Google Maps</a>
+            <a class="btn btn-sm btn-outline-secondary" href="@osmUrl" target="_blank" rel="noopener">OpenStreetMap</a>
+            <a class="btn btn-sm btn-outline-secondary" href="@appleMapsUrl" target="_blank" rel="noopener">Apple
+              Maps</a>
+          </dd>
+        </dl>
+
+        @if (Model.CurrentPetugas?.Any() ?? false)
+        {
+          <div class="section-title">Ringkas PIC</div>
+          <div class="d-flex flex-wrap gap-2">
+            @foreach (var p in Model.CurrentPetugas.Take(3))
+            {
+              <span class="badge-soft">@p.Nama (@p.BadgeNumber)</span>
+            }
+            @if (Model.CurrentPetugas.Count > 3)
+            {
+              <span class="badge-soft">+@((Model.CurrentPetugas.Count - 3)) lainnya</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Kolom kanan: Peta -->
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <div class="section-title d-flex align-items-center justify-content-between">
+          <span>Peta Lokasi</span>
+          <span class="text-muted small">klik peta untuk membuka di Google Maps</span>
+        </div>
+        <div id="map" class="map-preview" role="img" aria-label="Peta lokasi"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PIC list -->
+<div class="card mt-3">
+  <div class="card-body">
+    <div class="section-title">Petugas di Lokasi</div>
+    @if (!(Model.CurrentPetugas?.Any() ?? false))
+    {
+      <div class="text-muted">Belum ada petugas.</div>
+    }
+    else
+    {
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th style="width:40%">Nama</th>
+              <th style="width:20%">Badge</th>
+              <th style="width:30%">Role</th>
+              <th style="width:10%" class="text-end">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var p in Model.CurrentPetugas)
+            {
+              <tr>
+                <td><strong>@(p.Nama ?? "-")</strong></td>
+                <td>@(p.BadgeNumber ?? "-")</td>
+                <td>@(p.Role ?? "-")</td>
+                <td class="text-end">
+                  <form asp-action="AddPetugas" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="lokasiId" value="@Model.Id" />
+                    <input type="hidden" name="petugasId" value="@p.Id" />
+                    <input type="hidden" name="asPIC" value="true" />
+                    <button class="btn btn-sm btn-outline-primary" title="Jadikan PIC">Jadikan PIC</button>
+                  </form>
+                  <form asp-action="UnlinkPetugas" method="post" class="d-inline"
+                    onsubmit="return confirm('Unlink petugas ini?');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="lokasiId" value="@Model.Id" />
+                    <input type="hidden" name="petugasId" value="@p.Id" />
+                    <button class="btn btn-sm btn-outline-danger">Unlink</button>
+                  </form>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+
+@section Scripts {
+  <!-- Leaflet (CDN ganda untuk fallback) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Copy util
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const sel = btn.getAttribute('data-copy');
+        const el = document.querySelector(sel);
+        if (!el) return;
+        const text = el.textContent?.trim() ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+          const old = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => btn.textContent = old, 1200);
+        } catch { alert('Gagal menyalin.'); }
+      });
+    });
+
+    // DMS formatter
+    (function () {
+      const lat = @((Model.lat.HasValue ? Model.lat.Value.ToString("R", CultureInfo.InvariantCulture) : "null"));
+      const lon = @((Model.Longitude.HasValue ? Model.Longitude.Value.ToString("R", CultureInfo.InvariantCulture) : "null"));
+      function toDMS(deg, isLat) {
+        if (deg == null || !isFinite(deg)) return '—';
+        const abs = Math.abs(deg);
+        const d = Math.floor(abs);
+        const minFloat = (abs - d) * 60;
+        const m = Math.floor(minFloat);
+        const s = Math.round((minFloat - m) * 60 * 100) / 100;
+        const hemi = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+        return `${d}° ${m}' ${s}" ${hemi}`;
+      }
+      document.getElementById('val-dms').textContent = `${toDMS(lat, true)} | ${toDMS(lon, false)}`;
+    })();
+
+    // Leaflet readonly map
+    (function () {
+      const lat = @((Model.lat.HasValue ? Model.lat.Value.ToString("R", CultureInfo.InvariantCulture) : "null"));
+      const lon = @((Model.Longitude.HasValue ? Model.Longitude.Value.ToString("R", CultureInfo.InvariantCulture) : "null"));
+
+      const container = document.getElementById('map');
+      if (!container) return;
+
+      if (lat == null || lon == null || !isFinite(lat) || !isFinite(lon)) {
+        container.innerHTML = '<div class="d-flex align-items-center justify-content-center h-100 text-muted">Koordinat belum tersedia</div>';
+        return;
+      }
+
+      const map = L.map(container, { zoomControl: true, attributionControl: true })
+        .setView([lat, lon], 17);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+
+      const marker = L.marker([lat, lon], { draggable: false }).addTo(map)
+        .bindPopup(`<strong>@(Model.Nama ?? "Lokasi")</strong><br/>${lat.toFixed(6)}, ${lon.toFixed(6)}<br/><a href='@gmapsUrl' target='_blank' rel='noopener'>Buka di Google Maps</a>`);
+
+      // Klik peta → buka Google Maps
+      @* container.addEventListener('click', () => {
+        window.open('@gmapsUrl', '_blank', 'noopener');
+      }); *@
+
+        setTimeout(() => map.invalidateSize(), 120);
+      window.addEventListener('resize', () => {
+        setTimeout(() => map.invalidateSize(), 120);
+      });
+    })();
+  </script>
 }

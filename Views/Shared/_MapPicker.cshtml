@@ -1,0 +1,316 @@
+@* Views/Shared/_MapPicker.cshtml — LAZY + SINGLETON + IDEMPOTENT *@
+@{
+    var forLat = (ViewData["forLat"] as string) ?? "lat";
+    var forLng = (ViewData["forLng"] as string) ?? "Longitude";
+    var startLat = (double?)ViewData["startLat"] ?? -6.200000; // Jakarta
+    var startLng = (double?)ViewData["startLng"] ?? 106.816666;
+    var startZoom = (int?)ViewData["startZoom"] ?? 13;
+
+    var guid = Guid.NewGuid().ToString("N").Substring(0, 8);
+    var mapId = $"map-{guid}";
+}
+
+<style>
+    .map-picker {
+        height: 380px;
+        border-radius: .5rem;
+        border: 1px solid #dee2e6;
+        position: relative;
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+
+    .map-loader {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        background: repeating-linear-gradient(45deg, #f8f9fa, #f8f9fa 10px, #f1f3f5 10px, #f1f3f5 20px);
+    }
+
+    .leaflet-control-geolocate {
+        background: #fff;
+        padding: .25rem .5rem;
+        border-radius: .375rem;
+        border: 1px solid #ced4da;
+        cursor: pointer;
+    }
+
+    .leaflet-control-geolocate:hover {
+        background: #f1f3f5;
+    }
+
+    .leaflet-control-searchbox {
+        background: #fff;
+        border: 1px solid #ced4da;
+        border-radius: .375rem;
+        padding: .25rem;
+    }
+
+    .leaflet-control-searchbox input {
+        width: 220px;
+        border: none;
+        outline: none;
+        padding: .25rem .5rem;
+    }
+</style>
+
+<div class="mb-3">
+    <label class="form-label d-flex align-items-center gap-2">
+        Pilih Lokasi di Peta
+        <small class="text-muted">(klik peta atau geser pin, akurasi ~6 desimal)</small>
+    </label>
+
+    <div id="@mapId" class="map-picker" data-map-init="0" data-map-ready="0" data-lat-name="@forLat"
+        data-lng-name="@forLng" data-start-lat="@startLat" data-start-lng="@startLng" data-start-zoom="@startZoom">
+        <div class="map-loader"><span id="@mapId-loader-text">Menunggu elemen tampil…</span></div>
+    </div>
+
+    <div class="form-text mt-2">Tips: klik ikon target untuk deteksi lokasi Anda.</div>
+</div>
+
+<script>
+    (function () {
+        const container = document.getElementById('@mapId');
+        if (!container) return;
+
+        // ======= UTIL =======
+        const setLoader = (msg) => {
+            const el = document.getElementById('@mapId-loader-text');
+            if (el) el.textContent = msg;
+        };
+        const toNumber = (v) => {
+            if (v == null) return null;
+            const n = Number(String(v).trim().replace(',', '.'));
+            return Number.isFinite(n) ? n : null;
+        };
+        const fmt6 = (n) => (n == null || !Number.isFinite(n)) ? '' : n.toFixed(6);
+
+        // ======= SINGLETON LOADER (CSS/JS hanya sekali per halaman) =======
+        window.__leafletLoader = window.__leafletLoader || (function () {
+            const CSS_URLS = [
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+                'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css',
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css'
+            ];
+            const JS_URLS = [
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+                'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js'
+            ];
+
+            let cssLoaded = false;
+            let cssPromise = null;
+            let jsPromise = null;
+
+            function loadCssSequential() {
+                if (cssLoaded) return Promise.resolve();
+                // Sudah ada CSS Leaflet?
+                const has = Array.from(document.styleSheets || []).some(ss => (ss.href || '').includes('leaflet'));
+                if (has) { cssLoaded = true; return Promise.resolve(); }
+
+                if (cssPromise) return cssPromise;
+
+                cssPromise = new Promise((resolve) => {
+                    (function next(i) {
+                        if (i >= CSS_URLS.length) { cssLoaded = true; return resolve(); }
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet'; link.href = CSS_URLS[i];
+                        link.onload = () => { cssLoaded = true; resolve(); };
+                        link.onerror = () => next(i + 1);
+                        document.head.appendChild(link);
+                    })(0);
+                });
+                return cssPromise;
+            }
+
+            function loadJsSequential() {
+                if (window.L && window.L.map) return Promise.resolve();
+                if (jsPromise) return jsPromise;
+
+                jsPromise = new Promise((resolve, reject) => {
+                    (function next(i) {
+                        if (i >= JS_URLS.length) return reject(new Error('Semua CDN Leaflet gagal.'));
+                        const s = document.createElement('script'); s.src = JS_URLS[i];
+                        s.onload = () => resolve();
+                        s.onerror = () => next(i + 1);
+                        document.head.appendChild(s);
+                    })(0);
+                });
+                return jsPromise;
+            }
+
+            async function ensure() {
+                await loadCssSequential();
+                await loadJsSequential();
+            }
+
+            return { ensure };
+        })();
+
+        // ======= IDEMPOTENT GUARD PER ELEMEN =======
+        if (container.dataset.mapInit === '1') {
+            // Sudah di-wire sebelumnya (mis. partial rerender), jangan inisialisasi ulang
+            return;
+        }
+        container.dataset.mapInit = '1';
+
+        // ======= LAZY LOAD: hanya init saat terlihat =======
+        const HARD_TIMEOUT_MS = 12000;
+        let hardTimer = null;
+        let observer = null;
+
+        function startTimeout() {
+            clearTimeout(hardTimer);
+            hardTimer = setTimeout(() => {
+                if (!window.L || container.dataset.mapReady !== '1') {
+                    setLoader('Gagal memuat peta (timeout). Coba refresh atau periksa blokir CDN.');
+                    console.error('[MapPicker] Timeout memuat Leaflet.');
+                }
+            }, HARD_TIMEOUT_MS);
+        }
+
+        async function initMapWhenVisible() {
+            if (!container.isConnected) return;
+
+            // Ambil konfigurasi dari data-*
+            const LATNAME = container.dataset.latName || 'lat';
+            const LNGNAME = container.dataset.lngName || 'Longitude';
+            const START = {
+                lat: toNumber(container.dataset.startLat) ?? -6.2,
+                lng: toNumber(container.dataset.startLng) ?? 106.816666,
+                zoom: Number(container.dataset.startZoom ?? 13)
+            };
+
+            try {
+                startTimeout();
+                setLoader('Memuat library peta…');
+                await window.__leafletLoader.ensure();
+
+                // Jika sudah ready (mis. user scroll balik), jangan init ulang
+                if (container.dataset.mapReady === '1') {
+                    clearTimeout(hardTimer);
+                    return;
+                }
+
+                const latInput = document.querySelector(`[name="${LATNAME}"]`);
+                const lngInput = document.querySelector(`[name="${LNGNAME}"]`);
+
+                let la = toNumber(latInput?.value); if (la == null) la = START.lat;
+                let lo = toNumber(lngInput?.value); if (lo == null) lo = START.lng;
+
+                const map = L.map(container, { zoomControl: true }).setView([la, lo], START.zoom);
+
+                // Pastikan tidak menumpuk tile layer bila ada inisialisasi sebelumnya (harusnya tidak, karena guard)
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
+
+                const marker = L.marker([la, lo], { draggable: true }).addTo(map);
+
+                function syncToInputs(ll) {
+                    if (latInput) latInput.value = fmt6(ll.lat);
+                    if (lngInput) lngInput.value = fmt6(ll.lng);
+                }
+                syncToInputs({ lat: la, lng: lo });
+
+                map.on('click', (e) => { marker.setLatLng(e.latlng); syncToInputs(e.latlng); });
+                marker.on('moveend', (e) => { syncToInputs(e.target.getLatLng()); });
+
+                // Geolocate control
+                const GeoCtl = L.Control.extend({
+                    onAdd: function () {
+                        const btn = L.DomUtil.create('div', 'leaflet-control-geolocate');
+                        btn.title = 'Gunakan lokasi saya'; btn.innerHTML = '📍 Lokasi Saya';
+                        btn.onclick = function () {
+                            if (!navigator.geolocation) { alert('Browser tidak mendukung geolocation.'); return; }
+                            navigator.geolocation.getCurrentPosition(function (pos) {
+                                const ll = L.latLng(pos.coords.latitude, pos.coords.longitude);
+                                map.setView(ll, 17); marker.setLatLng(ll); syncToInputs(ll);
+                            }, function (err) { alert('Gagal ambil lokasi: ' + (err?.message || 'unknown')); },
+                                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+                        };
+                        return btn;
+                    }
+                });
+                (new GeoCtl({ position: 'topleft' })).addTo(map);
+
+                // Search control (Nominatim)
+                const SearchCtl = L.Control.extend({
+                    onAdd: function () {
+                        const box = L.DomUtil.create('div', 'leaflet-control-searchbox');
+                        const input = document.createElement('input'); input.type = 'search'; input.placeholder = 'Cari alamat/tempat...';
+                        box.appendChild(input);
+                        L.DomEvent.addListener(input, 'keydown', function (ev) {
+                            if (ev.key === 'Enter') {
+                                ev.preventDefault();
+                                const q = input.value.trim(); if (!q) return;
+                                fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q))
+                                    .then(r => r.json()).then(list => {
+                                        if (!Array.isArray(list) || list.length === 0) { alert('Tidak ditemukan.'); return; }
+                                        const hit = list[0]; const la = Number(hit.lat), lo = Number(hit.lon);
+                                        if (!Number.isFinite(la) || !Number.isFinite(lo)) return;
+                                        const ll = L.latLng(la, lo);
+                                        map.setView(ll, 17); marker.setLatLng(ll); syncToInputs(ll);
+                                    }).catch(() => alert('Gagal mencari. Coba lagi.'));
+                            }
+                        });
+                        return box;
+                    }
+                });
+                (new SearchCtl({ position: 'topright' })).addTo(map);
+
+                // Manual edit → update marker
+                function wireManual(inp) {
+                    inp?.addEventListener('change', () => {
+                        const la = toNumber(latInput?.value), lo = toNumber(lngInput?.value);
+                        if (la == null || lo == null) return;
+                        const ll = L.latLng(la, lo);
+                        marker.setLatLng(ll); map.panTo(ll); syncToInputs(ll);
+                    });
+                }
+                wireManual(latInput); wireManual(lngInput);
+
+                // Bersihkan loader & ukur ulang
+                const loader = container.querySelector('.map-loader'); if (loader) loader.remove();
+                setTimeout(() => map.invalidateSize(), 120);
+                let resizeTimer = null;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => map.invalidateSize(), 150);
+                });
+
+                container.dataset.mapReady = '1';
+                clearTimeout(hardTimer);
+            } catch (err) {
+                console.error('[MapPicker] init error:', err);
+                setLoader('Terjadi kesalahan saat inisialisasi peta.');
+                clearTimeout(hardTimer);
+            }
+        }
+
+        // IntersectionObserver: trigger init saat terlihat (plus sedikit prefetch)
+        setLoader('Menunggu elemen tampil…');
+        observer = new IntersectionObserver((entries) => {
+            for (const e of entries) {
+                if (e.isIntersecting) {
+                    observer.disconnect();
+                    setLoader('Menyiapkan peta…');
+                    initMapWhenVisible();
+                    break;
+                }
+            }
+        }, { root: null, rootMargin: '200px', threshold: 0 });
+
+        observer.observe(container);
+
+        // Safety: jika IO tidak tersedia di browser lama → langsung init
+        if (typeof IntersectionObserver === 'undefined') {
+            setLoader('Menyiapkan peta…');
+            initMapWhenVisible();
+        }
+    })();
+</script>

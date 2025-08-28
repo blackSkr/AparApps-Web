@@ -18,6 +18,7 @@ D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.csproj.CoreCompileInputs.cac
 D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.MvcApplicationPartsAssemblyInfo.cache
 D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.RazorAssemblyInfo.cache
 D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.RazorAssemblyInfo.cs
+D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.sourcelink.json
 D:\AparAppsWebsite\obj\Debug\net8.0\staticwebassets.build.json
 D:\AparAppsWebsite\obj\Debug\net8.0\staticwebassets.development.json
 D:\AparAppsWebsite\obj\Debug\net8.0\staticwebassets\msbuild.AparAppsWebsite.Microsoft.AspNetCore.StaticWebAssets.props

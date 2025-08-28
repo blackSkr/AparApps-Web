@@ -13,7 +13,7 @@
 
 <h2 class="mb-3">Tambah Lokasi</h2>
 
-<form id="form-lokasi" asp-action="Create" method="post">
+<form id="form-lokasi" asp-action="Create" method="post" novalidate>
   @Html.AntiForgeryToken()
 
   <div class="mb-3">
@@ -25,17 +25,27 @@
   <div class="row">
     <div class="col-md-6 mb-3">
       <label class="form-label">Latitude</label>
-      <input asp-for="lat" type="number" step="any" class="form-control" />
+      <!-- Matikan semua rule client-side -->
+      <input asp-for="lat" type="text" class="form-control" data-val="false" inputmode="decimal" step="any" />
+      <small class="form-text text-muted">Contoh: -0.435873</small>
       <span asp-validation-for="lat" class="text-danger"></span>
     </div>
     <div class="col-md-6 mb-3">
       <label class="form-label">Longitude</label>
-      <input asp-for="Longitude" type="number" step="any" class="form-control" />
+      <input asp-for="Longitude" type="text" class="form-control" data-val="false" inputmode="decimal" step="any" />
+      <small class="form-text text-muted">Contoh: 117.204876</small>
       <span asp-validation-for="Longitude" class="text-danger"></span>
     </div>
   </div>
 
-  <!-- PIC utama (opsional, kompatibel payload create) -->
+  @* MAP PICKER *@
+  @{
+    ViewData["forLat"] = "lat";
+    ViewData["forLng"] = "Longitude";
+    ViewData["startZoom"] = 13;
+  }
+  <partial name="~/Views/Shared/_MapPicker.cshtml" />
+
   <div class="mb-4">
     <label class="form-label">PIC Utama (opsional)</label>
     <select asp-for="PICPetugasId" class="form-select" asp-items="selectItems">
@@ -44,11 +54,9 @@
     <span asp-validation-for="PICPetugasId" class="text-danger"></span>
   </div>
 
-  <!-- LIST BUILDER: PIC tambahan -->
   <div class="card mb-3">
     <div class="card-body">
       <h5 class="card-title mb-3">PIC Tambahan</h5>
-
       <div class="d-flex gap-2 align-items-end mb-3">
         <div class="flex-grow-1">
           <label class="form-label">Tambah Petugas</label>
@@ -62,11 +70,8 @@
         </div>
         <button type="button" id="btn-add" class="btn btn-outline-primary">Tambah</button>
       </div>
-
       <div id="empty-hint" class="text-muted" style="display:none;">Belum ada PIC tambahan.</div>
       <ul id="list-pic" class="list-group"></ul>
-
-      <!-- container hidden inputs -->
       <div id="hidden-pic-container"></div>
       <span asp-validation-for="PICMultiIds" class="text-danger"></span>
       <small class="text-muted d-block mt-2">Kamu bisa tambah lebih dari satu. Hapus dari daftar untuk batal.</small>
@@ -81,76 +86,54 @@
 
 @section Scripts {
   <partial name="_ValidationScriptsPartial" />
+
   <script>
+    // Sanitasi live: ubah koma -> titik saat ketik
+    (function () {
+      const lat = document.querySelector('#form-lokasi [name="lat"]');
+      const lng = document.querySelector('#form-lokasi [name="Longitude"]');
+      function sanitize(e) { const v = e.target.value || ''; const nv = v.replace(',', '.'); if (nv !== v) e.target.value = nv; }
+      lat?.addEventListener('input', sanitize);
+      lng?.addEventListener('input', sanitize);
+    })();
+
+    // Builder daftar PIC tambahan
     (function () {
       const ddl = document.getElementById('ddl-pic');
       const list = document.getElementById('list-pic');
       const btnAdd = document.getElementById('btn-add');
       const hidden = document.getElementById('hidden-pic-container');
       const emptyHint = document.getElementById('empty-hint');
-
-      const state = new Map(); // petugasId -> text
-
-      function renderEmptyHint() {
-        emptyHint.style.display = state.size === 0 ? 'block' : 'none';
+      const state = new Map();
+      function renderEmptyHint() { emptyHint.style.display = state.size === 0 ? 'block' : 'none'; }
+      function removeItem(id) {
+        state.delete(id);
+        list.querySelector(`li[data-id="${id}"]`)?.remove();
+        hidden.querySelector(`input[data-id="${id}"]`)?.remove();
+        renderEmptyHint();
       }
-
       function addItem(id, text) {
-        if (!id) return;
-        if (state.has(id)) return; // no duplicate
-
-        // jangan duplikasi dengan PIC utama
-        const picUtama = document.querySelector('[name="PICPetugasId"]').value;
+        if (!id || state.has(id)) return;
+        const picUtama = document.querySelector('[name="PICPetugasId"]')?.value;
         if (picUtama && picUtama === id) return;
-
         state.set(id, text);
-
-        // visual list item
         const li = document.createElement('li');
         li.className = 'list-group-item d-flex justify-content-between align-items-center';
         li.dataset.id = id;
-        li.innerHTML = `<span>${text}</span>
-                          <button type="button" class="btn btn-sm btn-outline-danger">Hapus</button>`;
+        li.innerHTML = `<span>${text}</span><button type="button" class="btn btn-sm btn-outline-danger">Hapus</button>`;
         li.querySelector('button').addEventListener('click', () => removeItem(id));
         list.appendChild(li);
-
-        // hidden input for model binder (PICMultiIds)
         const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'PICMultiIds';
-        input.value = id;
-        input.dataset.id = id;
+        input.type = 'hidden'; input.name = 'PICMultiIds'; input.value = id; input.dataset.id = id;
         hidden.appendChild(input);
-
         renderEmptyHint();
       }
-
-      function removeItem(id) {
-        state.delete(id);
-        // remove li
-        const li = list.querySelector(`li[data-id="${id}"]`);
-        if (li) li.remove();
-        // remove hidden input
-        const input = hidden.querySelector(`input[data-id="${id}"]`);
-        if (input) input.remove();
-        renderEmptyHint();
-      }
-
       btnAdd.addEventListener('click', () => {
-        const id = ddl.value;
-        const text = ddl.options[ddl.selectedIndex]?.text;
-        addItem(id, text);
+        const id = ddl.value, text = ddl.options[ddl.selectedIndex]?.text; addItem(id, text);
       });
-
-      // jika user mengganti PIC utama, buang dari list tambahan bila sama
-      const picUtamaSel = document.querySelector('[name="PICPetugasId"]');
-      picUtamaSel.addEventListener('change', () => {
-        const id = picUtamaSel.value;
-        if (!id) return;
-        if (state.has(id)) removeItem(id);
+      document.querySelector('[name="PICPetugasId"]')?.addEventListener('change', (e) => {
+        const id = e.target.value; if (id && state.has(id)) removeItem(id);
       });
-
-      // initial
       renderEmptyHint();
     })();
   </script>

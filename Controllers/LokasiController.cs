@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 // ===== Alias model inti =====
 using AparLokasi = AparAppsWebsite.Models.Lokasi;
@@ -44,6 +45,16 @@ namespace AparWebAdmin.Controllers
 
         private static double? ToDouble(decimal? v) => v.HasValue ? (double?)Convert.ToDouble(v.Value) : null;
         private static decimal? ToDecimal(double? v) => v.HasValue ? (decimal?)Convert.ToDecimal(v.Value) : null;
+
+        // ===== Helper: parse angka dengan InvariantCulture (titik sebagai desimal) =====
+        private static double? ParseInvariant(string? s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return null;
+            s = s.Replace(',', '.'); // antisipasi user ketik koma
+            return double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)
+                ? d
+                : (double?)null;
+        }
 
         // ===========================
         // LIST
@@ -99,29 +110,40 @@ namespace AparWebAdmin.Controllers
             if (string.IsNullOrWhiteSpace(vm.Nama))
                 ModelState.AddModelError(nameof(vm.Nama), "Nama lokasi wajib diisi.");
 
+            // ⬇️ PENTING: paksa parse invariant dari form agar tidak terjebak culture id-ID (koma)
+            var latStr = Request?.Form["lat"].ToString();
+            var lonStr = Request?.Form["Longitude"].ToString();
+            var latParsed = ParseInvariant(latStr);
+            var lonParsed = ParseInvariant(lonStr);
+            if (latParsed.HasValue) vm.lat = latParsed;
+            if (lonParsed.HasValue) vm.Longitude = lonParsed;
+
             if (!ModelState.IsValid)
             {
-                vm.PICOptions = (await GetLokasiFormMetaAsync())?.petugasTanpaLokasi ?? new List<AparPetugasOption>();
+                vm.PICOptions = (await GetLokasiFormMetaAsync())?.petugasTanpaLokasi ?? new();
                 return View(vm);
             }
 
+            // 🔐 Normalisasi koordinat (auto-swap + round 6 + clamp di VM)
+            var (lat6, lon6) = vm.NormalizeLatLon();
+
             var payload = new AparLokasiFormRequest
             {
-                nama = vm.Nama,
-                lat = vm.lat,
-                @long = vm.Longitude,
-                picPetugasId = vm.PICPetugasId // opsional, kompatibel dengan API
+                nama = vm.Nama?.Trim(),
+                lat = lat6,
+                @long = lon6,
+                picPetugasId = vm.PICPetugasId
             };
 
             var (ok, err, data) = await CreateLokasiAsync(payload);
             if (!ok)
             {
                 TempData["Error"] = err ?? "Gagal menyimpan lokasi.";
-                vm.PICOptions = (await GetLokasiFormMetaAsync())?.petugasTanpaLokasi ?? new List<AparPetugasOption>();
+                vm.PICOptions = (await GetLokasiFormMetaAsync())?.petugasTanpaLokasi ?? new();
                 return View(vm);
             }
 
-            // Tambah PIC tambahan (list builder)
+            // Tambah PIC tambahan (optional)
             if (data?.Id is int lokasiId && lokasiId > 0 && vm.PICMultiIds?.Any() == true)
             {
                 var extras = vm.PICMultiIds
@@ -233,6 +255,14 @@ namespace AparWebAdmin.Controllers
             if (string.IsNullOrWhiteSpace(vm.Nama))
                 ModelState.AddModelError(nameof(vm.Nama), "Nama lokasi wajib diisi.");
 
+            // ⬇️ PENTING: parse invariant dari form setiap submit edit
+            var latStr = Request?.Form["lat"].ToString();
+            var lonStr = Request?.Form["Longitude"].ToString();
+            var latParsed = ParseInvariant(latStr);
+            var lonParsed = ParseInvariant(lonStr);
+            if (latParsed.HasValue) vm.lat = latParsed;
+            if (lonParsed.HasValue) vm.Longitude = lonParsed;
+
             if (!ModelState.IsValid)
             {
                 // Repopulate agar form tetap terisi
@@ -265,11 +295,14 @@ namespace AparWebAdmin.Controllers
                 return View(vm);
             }
 
+            // 🔐 Normalisasi koordinat
+            var (lat6, lon6) = vm.NormalizeLatLon();
+
             var payload = new AparLokasiFormRequest
             {
-                nama = vm.Nama,
-                lat = vm.lat,
-                @long = vm.Longitude,
+                nama = vm.Nama?.Trim(),
+                lat = lat6,
+                @long = lon6,
                 picPetugasId = vm.PICPetugasId
             };
 
@@ -309,6 +342,23 @@ namespace AparWebAdmin.Controllers
             var (ok, err) = await AddPetugasToLokasiAsync(lokasiId, petugasId, asPIC);
             TempData[ok ? "Success" : "Error"] = ok ? "Petugas ditambahkan." : err ?? "Gagal menambah petugas.";
             return RedirectToAction(nameof(Edit), new { id = lokasiId });
+        }
+        private async Task<(bool ok, string? err)> UnlinkPetugasFromLokasiAsync(int lokasiId, int petugasId)
+        {
+            try
+            {
+                var res = await _http.DeleteAsync(PathUnlinkPetugas(lokasiId, petugasId));
+                if (!res.IsSuccessStatusCode)
+                {
+                    return (false, await SafeReadErrorAsync(res));
+                }
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "UnlinkPetugasFromLokasiAsync error");
+                return (false, ex.Message);
+            }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
@@ -474,25 +524,6 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        private async Task<(bool ok, string? err)> UnlinkPetugasFromLokasiAsync(int lokasiId, int petugasId)
-        {
-            try
-            {
-                var res = await _http.DeleteAsync(PathUnlinkPetugas(lokasiId, petugasId));
-                if (!res.IsSuccessStatusCode)
-                {
-                    return (false, await SafeReadErrorAsync(res));
-                }
-                return (true, null);
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "UnlinkPetugasFromLokasiAsync error");
-                return (false, ex.Message);
-            }
-        }
-
-        // ------ Parser payload lokasi (fleksibel) ------
         private async Task<(AparLokasi lokasi, List<PetugasListItemFallback> items)?> GetLokasiWithPetugasAsync(int id)
         {
             try
@@ -652,8 +683,8 @@ namespace AparWebAdmin.Controllers
                     if (el.ValueKind == JsonValueKind.Number && el.TryGetDouble(out var d)) return d;
                     if (el.ValueKind == JsonValueKind.String &&
                         double.TryParse(el.GetString(),
-                            System.Globalization.NumberStyles.Any,
-                            System.Globalization.CultureInfo.InvariantCulture,
+                            NumberStyles.Any,
+                            CultureInfo.InvariantCulture,
                             out var ds)) return ds;
                 }
             }
