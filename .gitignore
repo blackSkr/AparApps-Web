@@ -1,0 +1,40 @@
+# Build results
+bin/
+obj/
+out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio
+.vs/
+
+# Rider / JetBrains
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+# Uncomment kalau mau commit lock file
+# packages.lock.json
+
+# Publish output
+*.publish.xml
+*.publishproj
+
+# Config secrets
+secrets.json
+
+# Env file
+.env
