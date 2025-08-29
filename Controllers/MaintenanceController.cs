@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
-using System.Security.Claims;
 using System.Text;
 
 namespace AparWebAdmin.Controllers
@@ -23,6 +22,22 @@ namespace AparWebAdmin.Controllers
         private bool IsAdmin() => User?.IsInRole("AdminWeb") == true;
         private bool IsRescue() => User?.IsInRole("Rescue") == true;
         private string GetUserBadge() => User?.FindFirst("BadgeNumber")?.Value ?? "";
+
+        // ===== Helpers: normalisasi field BE → model FE =====
+        private static void NormalizeMaintenance(Maintenance m)
+        {
+            // BE kadang kirim PetugasBadge; model kamu pakai BadgeNumber
+            if (string.IsNullOrWhiteSpace(m.BadgeNumber) && !string.IsNullOrWhiteSpace(m.PetugasBadge))
+                m.BadgeNumber = m.PetugasBadge;
+
+            // Null safety umum
+            m.Kondisi ??= "";
+        }
+
+        private static void NormalizeMaintenanceList(List<Maintenance> list)
+        {
+            foreach (var m in list) NormalizeMaintenance(m);
+        }
 
         // Index (global) atau per APAR (?id=xxx)
         // - AdminWeb/Rescue: lihat semua
@@ -43,18 +58,21 @@ namespace AparWebAdmin.Controllers
 
                 var json = await res.Content.ReadAsStringAsync();
                 var wrapper = JsonConvert.DeserializeObject<JObject>(json);
+
+                // BE balas { success, data: [...] }
                 var list = wrapper?["data"]?.ToObject<List<Maintenance>>() ?? new();
 
-                // Null-safety
-                foreach (var m in list)
-                    m.Kondisi ??= "";
+                // 🔧 Normalisasi nama kolom (PetugasBadge → BadgeNumber) + null-safety
+                NormalizeMaintenanceList(list);
 
                 // 🔐 Akses: jika bukan Admin/Rescue → filter by badge milik user
                 if (!IsAdmin() && !IsRescue())
                 {
                     var myBadge = GetUserBadge();
                     if (!string.IsNullOrWhiteSpace(myBadge))
-                        list = list.Where(x => string.Equals(x.BadgeNumber, myBadge, StringComparison.OrdinalIgnoreCase)).ToList();
+                        list = list
+                            .Where(x => string.Equals(x.BadgeNumber ?? "", myBadge, StringComparison.OrdinalIgnoreCase))
+                            .ToList();
                     else
                         list = new List<Maintenance>();
                 }
@@ -91,12 +109,16 @@ namespace AparWebAdmin.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
+                // 🔧 Samakan field badge & null-safety
+                NormalizeMaintenance(data);
+
                 // 🔐 Akses: Admin/Rescue boleh; selain itu hanya jika BadgeNumber sama
                 if (!IsAdmin() && !IsRescue())
                 {
                     var myBadge = GetUserBadge();
+                    var dataBadge = data.BadgeNumber ?? data.PetugasBadge ?? "";
                     if (string.IsNullOrWhiteSpace(myBadge) ||
-                        !string.Equals(myBadge, data.BadgeNumber ?? "", StringComparison.OrdinalIgnoreCase))
+                        !string.Equals(myBadge, dataBadge, StringComparison.OrdinalIgnoreCase))
                     {
                         TempData["Error"] = "Anda tidak memiliki akses ke detail maintenance ini.";
                         return RedirectToAction(nameof(Index));
@@ -105,14 +127,13 @@ namespace AparWebAdmin.Controllers
 
                 // Map checklist
                 var checklistJson = wrapper["data"]?["checklist"]?.ToObject<List<JObject>>() ?? new();
-                var checklist = checklistJson.Select(c => new ChecklistJawaban
+                data.Checklist = checklistJson.Select(c => new ChecklistJawaban
                 {
                     ChecklistId = (int)(c["ChecklistId"] ?? 0),
                     Jawaban = (bool)(c["Dicentang"] ?? false),
                     Keterangan = (string?)c["Keterangan"] ?? "",
                     PertanyaanChecklist = (string?)c["Pertanyaan"] ?? ""
                 }).ToList();
-                data.Checklist = checklist;
 
                 // Map photos
                 data.Photos = wrapper["data"]?["photos"]?.ToObject<List<FotoPemeriksaan>>() ?? new();

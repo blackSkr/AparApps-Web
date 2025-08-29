@@ -1,40 +1,62 @@
 @{
     string current = $"{ViewContext.RouteData.Values["Controller"]}";
     Func<string, string> active = c => c.Equals(current, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+
+    var isAuth = User?.Identity?.IsAuthenticated ?? false;
+    var isAdminWeb = isAuth && User.IsInRole("AdminWeb");
+
+    // Untuk non-admin hanya boleh lihat ini
+    var allowedForNonAdmin = new HashSet<string>(new[] { "Home", "Lokasi", "Maintenance" },
+    StringComparer.OrdinalIgnoreCase);
+    Func<string, bool> canShow = ctrl => isAdminWeb || allowedForNonAdmin.Contains(ctrl);
 }
 <aside class="sidebar p-3">
     <div class="mb-3 small text-uppercase text-muted ps-2">Menu</div>
     <nav class="nav flex-column">
-        <a class="nav-link @active("Home")" asp-controller="Home" asp-action="Index">
-            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-        </a>
-        <a class="nav-link @active("Peralatan")" asp-controller="Peralatan" asp-action="Index">
-            <i class="bi bi-fire me-2"></i> Peralatan
-        </a>
-        <a class="nav-link @active("JenisPeralatan")" asp-controller="JenisPeralatan" asp-action="Index">
-            <i class="bi bi-ui-checks me-2"></i> Jenis Peralatan
-        </a>
-        <a class="nav-link @active("Checklist")" asp-controller="Checklist" asp-action="Index">
-            <i class="bi bi-list-check me-2"></i> Checklist
-        </a>
-        <a class="nav-link @active("Lokasi")" asp-controller="Lokasi" asp-action="Index">
-            <i class="bi bi-geo-alt me-2"></i> Lokasi
-        </a>
-        <a class="nav-link @active("Petugas")" asp-controller="Petugas" asp-action="Index">
-            <i class="bi bi-people me-2"></i> Petugas
-        </a>
-        <a class="nav-link @active("IntervalPetugas")" asp-controller="IntervalPetugas" asp-action="Index">
-            <i class="bi bi-people me-2"></i> Interval Petugas
-        </a>
-        <a class="nav-link @active("RolePetugas")" asp-controller="RolePetugas" asp-action="Index">
-            <i class="bi bi-people me-2"></i> Role Petugas
-        </a>
-        <a class="nav-link @active("Maintenance")" asp-controller="Maintenance" asp-action="Index">
-            <i class="bi bi-clipboard-check me-2"></i> Maintenance
-        </a>
-        <a class="nav-link @active("Employee")" asp-controller="Employee" asp-action="Index">
-            <i class="fas fa-id-card"></i>
-            <span>Employee</span> </a>
+        @if (canShow("Home"))
+        {
+            <a class="nav-link @active("Home")" asp-controller="Home" asp-action="Index">
+                <i class="bi bi-speedometer2 me-2"></i> Dashboard
+            </a>
+        }
+
+        @if (isAdminWeb)
+        {
+            <a class="nav-link @active("Peralatan")" asp-controller="Peralatan" asp-action="Index">
+                <i class="bi bi-fire me-2"></i> Peralatan
+            </a>
+            <a class="nav-link @active("JenisPeralatan")" asp-controller="JenisPeralatan" asp-action="Index">
+                <i class="bi bi-ui-checks me-2"></i> Jenis Peralatan
+            </a>
+            <a class="nav-link @active("Checklist")" asp-controller="Checklist" asp-action="Index">
+                <i class="bi bi-list-check me-2"></i> Checklist
+            </a>
+            <a class="nav-link @active("Petugas")" asp-controller="Petugas" asp-action="Index">
+                <i class="bi bi-people me-2"></i> Petugas
+            </a>
+            <a class="nav-link @active("IntervalPetugas")" asp-controller="IntervalPetugas" asp-action="Index">
+                <i class="bi bi-people me-2"></i> Interval Petugas
+            </a>
+            <a class="nav-link @active("RolePetugas")" asp-controller="RolePetugas" asp-action="Index">
+                <i class="bi bi-people me-2"></i> Role Petugas
+            </a>
+            <a class="nav-link @active("Employee")" asp-controller="Employee" asp-action="Index">
+                <i class="fas fa-id-card"></i> <span>Employee</span>
+            </a>
+        }
+
+        @if (canShow("Lokasi"))
+        {
+            <a class="nav-link @active("Lokasi")" asp-controller="Lokasi" asp-action="Index">
+                <i class="bi bi-geo-alt me-2"></i> Lokasi
+            </a>
+        }
+        @if (canShow("Maintenance"))
+        {
+            <a class="nav-link @active("Maintenance")" asp-controller="Maintenance" asp-action="Index">
+                <i class="bi bi-clipboard-check me-2"></i> Maintenance
+            </a>
+        }
     </nav>
     <div class="mt-4 small text-muted ps-2">
         © @DateTime.Now.Year KPC • BPID

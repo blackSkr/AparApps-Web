@@ -5,6 +5,14 @@
     var isAuth = User?.Identity?.IsAuthenticated ?? false;
     var displayName = isAuth ? (User.Identity?.Name ?? "Pengguna") : "";
     var badge = isAuth ? (User.FindFirst("BadgeNumber")?.Value ?? "") : "";
+
+    // ✅ Hanya AdminWeb yang boleh lihat semua menu
+    var isAdminWeb = isAuth && User.IsInRole("AdminWeb");
+
+    // ✅ Untuk non-admin, batasi menu ke Dashboard (Home), Lokasi, Maintenance
+    var allowedForNonAdmin = new HashSet<string>(new[] { "Home", "Lokasi", "Maintenance" },
+    StringComparer.OrdinalIgnoreCase);
+    Func<string, bool> canShow = ctrl => isAdminWeb || allowedForNonAdmin.Contains(ctrl);
 }
 <nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
     <div class="container-fluid">
@@ -23,7 +31,6 @@
 
         <!-- Right: quick links (desktop) + CTA + user -->
         <div class="d-flex align-items-center gap-2 ms-auto">
-
             @if (isAuth)
             {
                 <!-- User dropdown -->
@@ -40,8 +47,6 @@
                         </span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-                        @* <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile">Profil</a></li>
-                        <li><hr class="dropdown-divider" /></li> *@
                         <li class="px-3 py-2">
                             <form asp-controller="Account" asp-action="Logout" method="post" class="m-0">
                                 @Html.AntiForgeryToken()
@@ -74,30 +79,45 @@
     </div>
     <div class="offcanvas-body p-0 d-flex flex-column">
         <nav class="nav flex-column p-2">
-            <a class="nav-link @active("Home")" asp-controller="Home" asp-action="Index">
-                <i class="bi bi-speedometer2 me-2"></i> Dashboard
-            </a>
-            <a class="nav-link @active("Peralatan")" asp-controller="Peralatan" asp-action="Index">
-                <i class="bi bi-fire me-2"></i> Peralatan
-            </a>
-            <a class="nav-link @active("JenisPeralatan")" asp-controller="JenisPeralatan" asp-action="Index">
-                <i class="bi bi-ui-checks me-2"></i> Jenis Peralatan
-            </a>
-            <a class="nav-link @active("Checklist")" asp-controller="Checklist" asp-action="Index">
-                <i class="bi bi-list-check me-2"></i> Checklist
-            </a>
-            <a class="nav-link @active("Lokasi")" asp-controller="Lokasi" asp-action="Index">
-                <i class="bi bi-geo-alt me-2"></i> Lokasi
-            </a>
-            <a class="nav-link @active("Petugas")" asp-controller="Petugas" asp-action="Index">
-                <i class="bi bi-people me-2"></i> Petugas
-            </a>
-            <a class="nav-link @active("IntervalPetugas")" asp-controller="IntervalPetugas" asp-action="Index">
-                <i class="bi bi-people me-2"></i> Interval Petugas
-            </a>
-            <a class="nav-link @active("Maintenance")" asp-controller="Maintenance" asp-action="Index">
-                <i class="bi bi-clipboard-check me-2"></i> Maintenance
-            </a>
+            @if (canShow("Home"))
+            {
+                <a class="nav-link @active("Home")" asp-controller="Home" asp-action="Index">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                </a>
+            }
+
+            @if (isAdminWeb)
+            {
+                <a class="nav-link @active("Peralatan")" asp-controller="Peralatan" asp-action="Index">
+                    <i class="bi bi-fire me-2"></i> Peralatan
+                </a>
+                <a class="nav-link @active("JenisPeralatan")" asp-controller="JenisPeralatan" asp-action="Index">
+                    <i class="bi bi-ui-checks me-2"></i> Jenis Peralatan
+                </a>
+                <a class="nav-link @active("Checklist")" asp-controller="Checklist" asp-action="Index">
+                    <i class="bi bi-list-check me-2"></i> Checklist
+                </a>
+                <a class="nav-link @active("Petugas")" asp-controller="Petugas" asp-action="Index">
+                    <i class="bi bi-people me-2"></i> Petugas
+                </a>
+                <a class="nav-link @active("IntervalPetugas")" asp-controller="IntervalPetugas" asp-action="Index">
+                    <i class="bi bi-people me-2"></i> Interval Petugas
+                </a>
+            }
+
+            @* Selalu tampil untuk AdminWeb; untuk non-admin hanya Lokasi & Maintenance *@
+            @if (canShow("Lokasi"))
+            {
+                <a class="nav-link @active("Lokasi")" asp-controller="Lokasi" asp-action="Index">
+                    <i class="bi bi-geo-alt me-2"></i> Lokasi
+                </a>
+            }
+            @if (canShow("Maintenance"))
+            {
+                <a class="nav-link @active("Maintenance")" asp-controller="Maintenance" asp-action="Index">
+                    <i class="bi bi-clipboard-check me-2"></i> Maintenance
+                </a>
+            }
         </nav>
 
         <div class="mt-auto">
