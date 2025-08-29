@@ -1,29 +1,29 @@
+// Controllers/HomeController.cs
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AparAppsWebsite.Models;
 
-namespace AparAppsWebsite.Controllers;
-
-public class HomeController : Controller
+namespace AparAppsWebsite.Controllers
 {
-    private readonly ILogger<HomeController> _logger;
-
-    public HomeController(ILogger<HomeController> logger)
+    [Authorize] // 🔒 wajib login untuk akses Home (akan redirect ke Dashboard)
+    public class HomeController : Controller
     {
-        _logger = logger;
-    }
+        private readonly ILogger<HomeController> _logger;
 
-    public IActionResult Index() => RedirectToAction("Index", "Dashboard");
+        public HomeController(ILogger<HomeController> logger)
+        {
+            _logger = logger;
+        }
 
+        public IActionResult Index() => RedirectToAction("Index", "Dashboard");
 
-    public IActionResult Privacy()
-    {
-        return View();
-    }
+        public IActionResult Privacy() => View();
 
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
-    {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
     }
 }

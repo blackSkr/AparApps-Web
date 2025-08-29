@@ -1,0 +1,27 @@
+@model AparAppsWebsite.Models.LoginViewModel
+@{
+    ViewData["Title"] = "Login";
+}
+<div class="row justify-content-center mt-5">
+    <div class="">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="mb-3">Login</h3>
+                <form method="post" asp-action="Login">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ReturnUrl" />
+                    <div class="mb-3">
+                        <label class="form-label">Badge Number</label>
+                        <input class="form-control" asp-for="BadgeNumber" placeholder="Mis. 12345" />
+                        <span class="text-danger" asp-validation-for="BadgeNumber"></span>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" asp-for="RememberMe" />
+                        <label class="form-check-label" asp-for="RememberMe">Ingat saya</label>
+                    </div>
+                    <button class="btn btn-brand w-100" type="submit">Masuk</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

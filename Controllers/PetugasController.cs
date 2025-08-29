@@ -1,12 +1,14 @@
 // Controllers/PetugasController.cs
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AparAppsWebsite.Models;
 using System.Linq;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize] // 🔒 Wajib login
     public class PetugasController : Controller
     {
         private readonly IHttpClientFactory _clientFactory;
@@ -127,7 +129,8 @@ namespace AparWebAdmin.Controllers
             return fallback;
         }
 
-        // INDEX
+        // INDEX (read-only untuk AdminWeb & Rescue)
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Index(string? q, int? roleId, int? lokasiId, int page = 1, int pageSize = 20, string sortBy = "BadgeNumber", string sortDir = "ASC")
         {
             var client = _clientFactory.CreateClient("ApiClient");
@@ -164,7 +167,8 @@ namespace AparWebAdmin.Controllers
             return View(data);
         }
 
-        // DETAILS
+        // DETAILS (read-only untuk AdminWeb & Rescue)
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Details(int id)
         {
             var client = _clientFactory.CreateClient("ApiClient");
@@ -176,8 +180,9 @@ namespace AparWebAdmin.Controllers
             return View(model);
         }
 
-        // ===== NEW: EMPLOYEE LOOKUP (tanpa ubah BE; fleksibel beberapa bentuk respons) =====
+        // ===== NEW: EMPLOYEE LOOKUP (khusus AdminWeb; dipakai saat Create) =====
         [HttpGet]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> EmployeeLookup(string? q, int limit = 20, int page = 1)
         {
             var client = _clientFactory.CreateClient("ApiClient");
@@ -261,7 +266,8 @@ namespace AparWebAdmin.Controllers
             return Json(results);
         }
 
-        // CREATE GET — ambil role meta
+        // CREATE GET — ambil role meta (AdminWeb only)
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create()
         {
             var meta = await GetFormMeta();
@@ -277,8 +283,9 @@ namespace AparWebAdmin.Controllers
             return View(vm);
         }
 
-        // CREATE POST — kirim employeeId (BE set EmployeeId+BadgeNumber otomatis)
+        // CREATE POST — kirim employeeId (AdminWeb only)
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create(PetugasCreateVm vm)
         {
             if (!ModelState.IsValid)
@@ -314,35 +321,36 @@ namespace AparWebAdmin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // EDIT GET — (struktur lama dipertahankan)
-        // EDIT GET — tanpa akses data.EmployeeId (karena Petugas tidak punya properti itu)
-public async Task<IActionResult> Edit(int id)
-{
-    var client = _clientFactory.CreateClient("ApiClient");
-    using var resp = await client.GetAsync($"/api/petugas/{id}");
-    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return NotFound();
-    resp.EnsureSuccessStatusCode();
+        // EDIT GET — tanpa mengubah EmployeeId/BadgeNumber (AdminWeb only)
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var client = _clientFactory.CreateClient("ApiClient");
+            using var resp = await client.GetAsync($"/api/petugas/{id}");
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return NotFound();
+            resp.EnsureSuccessStatusCode();
 
-    var data = JsonSerializer.Deserialize<Petugas>(await resp.Content.ReadAsStringAsync(), _json);
-    var meta = await GetFormMeta();
+            var data = JsonSerializer.Deserialize<Petugas>(await resp.Content.ReadAsStringAsync(), _json);
+            var meta = await GetFormMeta();
 
-    var vm = new PetugasEditVm
-    {
-        Id = data!.Id,
-        // TIDAK ADA: EmployeeId = data.EmployeeId,
-        EmployeeNama = data.EmployeeNama,   // tampil read-only jika perlu
-        BadgeNumber = data.BadgeNumber,     // tampil read-only jika perlu
-        RolePetugasId = data.RolePetugasId,
-        LokasiId = data.LokasiId,
-        Roles = MapRolesForDropdown(meta?.roles ?? new()),
-        Lokasi = meta?.lokasi ?? new()
-    };
+            var vm = new PetugasEditVm
+            {
+                Id = data!.Id,
+                // EmployeeId tidak diubah lewat sini
+                EmployeeNama = data.EmployeeNama,
+                BadgeNumber = data.BadgeNumber,
+                RolePetugasId = data.RolePetugasId,
+                LokasiId = data.LokasiId,
+                Roles = MapRolesForDropdown(meta?.roles ?? new()),
+                Lokasi = meta?.lokasi ?? new()
+            };
 
-    return View(vm);
-}
+            return View(vm);
+        }
 
-        // EDIT POST (PATCH role/lokasi — struktur lama dipertahankan)
+        // EDIT POST (PATCH role/lokasi — AdminWeb only)
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id, PetugasEditVm vm)
         {
             if (id != vm.Id) return BadRequest();
@@ -368,34 +376,35 @@ public async Task<IActionResult> Edit(int id)
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Petugas/Delete/5
-public async Task<IActionResult> Delete(int id)
-{
-    var client = _clientFactory.CreateClient("ApiClient");
-    var resp = await client.GetAsync($"/api/petugas/{id}");
-    if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return NotFound();
-    resp.EnsureSuccessStatusCode();
+        // DELETE GET (konfirmasi) — AdminWeb only
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var client = _clientFactory.CreateClient("ApiClient");
+            var resp = await client.GetAsync($"/api/petugas/{id}");
+            if (resp.StatusCode == System.Net.HttpStatusCode.NotFound) return NotFound();
+            resp.EnsureSuccessStatusCode();
 
-    var data = JsonSerializer.Deserialize<Petugas>(
-        await resp.Content.ReadAsStringAsync(), _json
-    );
+            var data = JsonSerializer.Deserialize<Petugas>(
+                await resp.Content.ReadAsStringAsync(), _json
+            );
 
-    return View(data);
-}
+            return View(data);
+        }
 
-// POST: Petugas/Delete/5
-[HttpPost, ActionName("Delete")]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> DeleteConfirmed(int id)
-{
-    var client = _clientFactory.CreateClient("ApiClient");
-    var resp = await client.DeleteAsync($"/api/petugas/{id}");
-    resp.EnsureSuccessStatusCode();
+        // DELETE POST — AdminWeb only
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var client = _clientFactory.CreateClient("ApiClient");
+            var resp = await client.DeleteAsync($"/api/petugas/{id}");
+            resp.EnsureSuccessStatusCode();
 
-    TempData["success"] = "Petugas berhasil dihapus.";
-    return RedirectToAction(nameof(Index));
-}
-
+            TempData["success"] = "Petugas berhasil dihapus.";
+            return RedirectToAction(nameof(Index));
+        }
 
         private static string? ExtractApiMessage(string raw)
         {

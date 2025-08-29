@@ -1,3 +1,5 @@
+// Controllers/JenisPeralatanController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using AparAppsWebsite.Models;
@@ -5,6 +7,7 @@ using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize(Roles = "AdminWeb")] // 🔒 hanya AdminWeb
     public class JenisPeralatanController : Controller
     {
         private readonly HttpClient _http;
@@ -36,6 +39,7 @@ namespace AparWebAdmin.Controllers
                 return View(new List<JenisPeralatan>());
             }
         }
+
         // GET: JenisPeralatan/Details/5
         public async Task<IActionResult> Details(int id)
         {
@@ -50,10 +54,10 @@ namespace AparWebAdmin.Controllers
 
                 var json = await res.Content.ReadAsStringAsync();
 
-                // 1) Coba direct: { "id":1, "nama":"...", "intervalPemeriksaanBulan":12 }
+                // 1) Direct
                 var direct = JsonConvert.DeserializeObject<JenisPeralatan>(json);
 
-                // 2) Kalau null, coba wrapped: { "data": { ... } }
+                // 2) Wrapped { data: {...} }
                 if (direct == null || (direct.Id == 0 && string.IsNullOrWhiteSpace(direct.Nama)))
                 {
                     var root = JsonConvert.DeserializeObject<dynamic>(json);

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using AparAppsWebsite.Models;
@@ -5,6 +6,7 @@ using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize(Roles = "AdminWeb")] // 🔒 hanya AdminWeb yang boleh akses controller ini
     public class ChecklistController : Controller
     {
         private readonly HttpClient _httpClient;
@@ -158,6 +160,7 @@ namespace AparWebAdmin.Controllers
 
         // POST: Checklist/Delete/5
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
             try

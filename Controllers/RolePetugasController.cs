@@ -1,4 +1,6 @@
+// Controllers/RolePetugasController.cs
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -6,6 +8,7 @@ using AparAppsWebsite.Models;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize] // 🔒 Wajib login
     public class RolePetugasController : Controller
     {
         private readonly HttpClient _http;
@@ -106,6 +109,7 @@ namespace AparWebAdmin.Controllers
             new StringContent(JsonConvert.SerializeObject(o), Encoding.UTF8, "application/json");
 
         // ===== Index (list + optional search) =====
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Index(string? q = null, int page = 1, int pageSize = 25)
         {
             try
@@ -138,6 +142,7 @@ namespace AparWebAdmin.Controllers
         }
 
         // ===== Details =====
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Details(int id)
         {
             var res = await _http.GetAsync($"api/role-petugas/{id}");
@@ -155,6 +160,7 @@ namespace AparWebAdmin.Controllers
         }
 
         // ===== Create =====
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create()
         {
             await LoadIntervalDropdownAsync();
@@ -162,6 +168,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create(RolePetugas model)
         {
             if (!ModelState.IsValid)
@@ -191,6 +198,7 @@ namespace AparWebAdmin.Controllers
         }
 
         // ===== Edit =====
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id)
         {
             var res = await _http.GetAsync($"api/role-petugas/{id}");
@@ -210,6 +218,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id, RolePetugas model)
         {
             if (!ModelState.IsValid)
@@ -240,6 +249,7 @@ namespace AparWebAdmin.Controllers
 
         // ===== Delete =====
         [HttpPost]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Delete(int id)
         {
             try

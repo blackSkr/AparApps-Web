@@ -5,9 +5,11 @@ using System.Linq;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
+using System.Security.Claims;
 
 // ===== Alias model inti =====
 using AparLokasi = AparAppsWebsite.Models.Lokasi;
@@ -19,6 +21,7 @@ using AparPetugasListItemVM = AparAppsWebsite.Models.PetugasListItemVM;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize] // 🔒 Wajib login untuk semua aksi di controller ini
     public class LokasiController : Controller
     {
         private readonly HttpClient _http;
@@ -43,6 +46,38 @@ namespace AparWebAdmin.Controllers
             _log = log;
         }
 
+        // =========================
+        // ===== Role Helpers  =====
+        // =========================
+        private bool IsAdmin() => User?.IsInRole("AdminWeb") == true;
+        private bool IsRescue() => User?.IsInRole("Rescue") == true;
+        private string GetUserBadge() => User?.FindFirst("BadgeNumber")?.Value ?? "";
+
+        private bool UserHasAccessToLokasi(AparLokasi lokasi, IEnumerable<PetugasListItemFallback> items)
+        {
+            if (IsAdmin() || IsRescue()) return true;
+
+            var myBadge = GetUserBadge();
+            if (string.IsNullOrWhiteSpace(myBadge)) return false;
+
+            // Akses jika user adalah PIC lokasi
+            if (!string.IsNullOrWhiteSpace(lokasi?.PIC_BadgeNumber) &&
+                string.Equals(lokasi.PIC_BadgeNumber, myBadge, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Akses jika user terdaftar sebagai petugas di lokasi (berdasarkan BadgeNumber)
+            if (items?.Any() == true &&
+                items.Any(p => !string.IsNullOrWhiteSpace(p.BadgeNumber) &&
+                               p.BadgeNumber.Equals(myBadge, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         private static double? ToDouble(decimal? v) => v.HasValue ? (double?)Convert.ToDouble(v.Value) : null;
         private static decimal? ToDecimal(double? v) => v.HasValue ? (decimal?)Convert.ToDecimal(v.Value) : null;
 
@@ -63,6 +98,25 @@ namespace AparWebAdmin.Controllers
         public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 20)
         {
             var all = await GetLokasiAsync() ?? new List<AparLokasi>();
+
+            // 🔐 Filter akses:
+            // AdminWeb & Rescue -> semua
+            // Lainnya -> hanya lokasi di mana user adalah PIC (berdasarkan klaim BadgeNumber)
+            if (!IsAdmin() && !IsRescue())
+            {
+                var myBadge = GetUserBadge();
+                if (!string.IsNullOrWhiteSpace(myBadge))
+                {
+                    all = all
+                        .Where(l => !string.IsNullOrWhiteSpace(l.PIC_BadgeNumber) &&
+                                    l.PIC_BadgeNumber.Equals(myBadge, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                }
+                else
+                {
+                    all = new List<AparLokasi>();
+                }
+            }
 
             if (!string.IsNullOrWhiteSpace(q))
             {
@@ -94,6 +148,7 @@ namespace AparWebAdmin.Controllers
         // CREATE
         // ===========================
         [HttpGet]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create()
         {
             var meta = await GetLokasiFormMetaAsync();
@@ -105,6 +160,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create(AparLokasiFormVM vm)
         {
             if (string.IsNullOrWhiteSpace(vm.Nama))
@@ -180,6 +236,13 @@ namespace AparWebAdmin.Controllers
 
             var (lokasi, items) = pack.Value;
 
+            // 🔐 Enforcement akses per-lokasi
+            if (!UserHasAccessToLokasi(lokasi, items))
+            {
+                TempData["Error"] = "Anda tidak memiliki akses ke lokasi ini.";
+                return RedirectToAction(nameof(Index));
+            }
+
             var vm = new AparLokasiFormVM
             {
                 Id = lokasi.Id,
@@ -203,6 +266,7 @@ namespace AparWebAdmin.Controllers
         // EDIT
         // ===========================
         [HttpGet]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id)
         {
             var pack = await GetLokasiWithPetugasAsync(id);
@@ -249,6 +313,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id, AparLokasiFormVM vm)
         {
             if (id != vm.Id) return BadRequest();
@@ -321,6 +386,7 @@ namespace AparWebAdmin.Controllers
         // DELETE
         // ===========================
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Delete(int id)
         {
             var (ok, err) = await DeleteLokasiAsync(id);
@@ -337,12 +403,14 @@ namespace AparWebAdmin.Controllers
         // RELASI PETUGAS (single)
         // ===========================
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> AddPetugas(int lokasiId, int petugasId, bool asPIC = false)
         {
             var (ok, err) = await AddPetugasToLokasiAsync(lokasiId, petugasId, asPIC);
             TempData[ok ? "Success" : "Error"] = ok ? "Petugas ditambahkan." : err ?? "Gagal menambah petugas.";
             return RedirectToAction(nameof(Edit), new { id = lokasiId });
         }
+
         private async Task<(bool ok, string? err)> UnlinkPetugasFromLokasiAsync(int lokasiId, int petugasId)
         {
             try
@@ -362,6 +430,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> UnlinkPetugas(int lokasiId, int petugasId)
         {
             var (ok, err) = await UnlinkPetugasFromLokasiAsync(lokasiId, petugasId);
@@ -373,6 +442,7 @@ namespace AparWebAdmin.Controllers
         // RELASI PETUGAS (batch/multi) — untuk Edit page
         // ===========================
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> AddManyPIC(int lokasiId, List<int> petugasIds)
         {
             if (petugasIds?.Any() != true)

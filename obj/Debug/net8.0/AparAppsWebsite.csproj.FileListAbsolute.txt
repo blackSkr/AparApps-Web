@@ -35,3 +35,4 @@ D:\AparAppsWebsite\obj\Debug\net8.0\refint\AparAppsWebsite.dll
 D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.pdb
 D:\AparAppsWebsite\obj\Debug\net8.0\AparAppsWebsite.genruntimeconfig.cache
 D:\AparAppsWebsite\obj\Debug\net8.0\ref\AparAppsWebsite.dll
+D:\AparAppsWebsite\bin\Debug\net8.0\dotenv.net.dll

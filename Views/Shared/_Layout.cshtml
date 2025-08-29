@@ -81,8 +81,15 @@
     <!-- 2) Bootstrap JS bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- 3) Section Scripts (mis. _ValidationScriptsPartial, Map Picker, dll) -->
-    @RenderSection("Scripts", required: false)
+    <!-- Render salah satu section scripts yang didefinisikan (case-insensitive safe) -->
+    @if (IsSectionDefined("scripts"))
+    {
+        @RenderSection("scripts", required: false)
+    }
+    else
+    {
+        @RenderSection("Scripts", required: false)
+    }
 </body>
 
 </html>

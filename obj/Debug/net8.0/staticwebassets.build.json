@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "M/6Iu44TWI2ChqOkSfzabfE4aR2mQ/zW5gOkz6N74BQ=",
+  "Hash": "sLAqDC1xA/0nF8MK7IaYJld8aBIFzqws0AmVof+edE8=",
   "Source": "AparAppsWebsite",
   "BasePath": "_content/AparAppsWebsite",
   "Mode": "Default",
@@ -91,6 +91,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\favicon.ico"
+    },
+    {
+      "Identity": "D:\\AparAppsWebsite\\wwwroot\\images\\KPC_Coal_mining.jpg",
+      "SourceId": "AparAppsWebsite",
+      "SourceType": "Discovered",
+      "ContentRoot": "D:\\AparAppsWebsite\\wwwroot\\",
+      "BasePath": "_content/AparAppsWebsite",
+      "RelativePath": "images/KPC_Coal_mining.jpg",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\images\\KPC_Coal_mining.jpg"
     },
     {
       "Identity": "D:\\AparAppsWebsite\\wwwroot\\images\\kpc-logo copy 2.png",

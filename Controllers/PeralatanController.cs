@@ -1,4 +1,5 @@
 // Controllers/PeralatanController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using AparAppsWebsite.Models;
@@ -6,6 +7,7 @@ using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize] // 🔒 Wajib login
     public class PeralatanController : Controller
     {
         private readonly HttpClient _httpClient;
@@ -18,6 +20,7 @@ namespace AparWebAdmin.Controllers
         private void SetApiBase() => ViewBag.ApiBase = _httpClient.BaseAddress?.ToString()?.TrimEnd('/');
 
         // LIST
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Index()
         {
             try
@@ -43,6 +46,7 @@ namespace AparWebAdmin.Controllers
         }
 
         // CREATE GET
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create()
         {
             SetApiBase();
@@ -52,6 +56,7 @@ namespace AparWebAdmin.Controllers
 
         // CREATE POST
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create(Peralatan peralatan, List<IFormFile> files)
         {
             if (!ModelState.IsValid)
@@ -103,6 +108,7 @@ namespace AparWebAdmin.Controllers
         }
 
         // EDIT GET
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id)
         {
             try
@@ -129,6 +135,7 @@ namespace AparWebAdmin.Controllers
 
         // EDIT POST
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id, Peralatan peralatan, List<IFormFile> files, bool? replacePhotos)
         {
             if (!ModelState.IsValid)
@@ -177,6 +184,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> AddPhotos(int id, List<IFormFile> files)
         {
             try
@@ -208,6 +216,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> DeletePhoto(int id, string path)
         {
             try
@@ -231,6 +240,7 @@ namespace AparWebAdmin.Controllers
         }
 
         [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -247,12 +257,13 @@ namespace AparWebAdmin.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ====== QR VIEW (FIXED) ======
+        // ====== QR VIEW ======
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> QR(int id)
         {
             try
             {
-                SetApiBase(); // penting agar ViewBag.ApiBase terisi
+                SetApiBase();
 
                 var resp = await _httpClient.GetAsync($"api/peralatan/admin/{id}/qr");
                 if (!resp.IsSuccessStatusCode)
@@ -263,7 +274,7 @@ namespace AparWebAdmin.Controllers
 
                 var json = await resp.Content.ReadAsStringAsync();
 
-                // Support dua bentuk: langsung QRCodeResponse atau wrapper { data: {...} }
+                // Support: langsung QRCodeResponse atau wrapper { data: {...} }
                 QRCodeResponse? qrData;
                 try
                 {
@@ -294,11 +305,10 @@ namespace AparWebAdmin.Controllers
                 if (string.IsNullOrWhiteSpace(qrData.QrUrl))
                 {
                     var apiBase = (ViewBag.ApiBase as string) ?? _httpClient.BaseAddress?.ToString()?.TrimEnd('/');
-                    // Sesuaikan rute berikut dengan BE kamu:
                     qrData.QrUrl = $"{apiBase}/api/peralatan/with-checklist?token={qrData.TokenQR}";
                 }
 
-                // Ringkaskan QrData (opsional) agar tidak kepanjangan
+                // Fallback QrData agar ringkas
                 if (string.IsNullOrWhiteSpace(qrData.QrData))
                 {
                     qrData.QrData = JsonConvert.SerializeObject(new
@@ -318,6 +328,7 @@ namespace AparWebAdmin.Controllers
             }
         }
 
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Details(int id)
         {
             try

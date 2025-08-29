@@ -1,25 +1,32 @@
 // Controllers/MaintenanceController.cs
 using AparAppsWebsite.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize] // 🔒 Wajib login
     public class MaintenanceController : Controller
     {
         private readonly HttpClient _http;
 
-        // Gunakan ApiClient dari IHttpClientFactory agar base address & headers seragam
         public MaintenanceController(IHttpClientFactory httpClientFactory)
         {
             _http = httpClientFactory.CreateClient("ApiClient");
         }
 
-        // Index (global) atau per APAR (jika ?id=xxx)
-        // Fitur: ringkasan KPI, client-side filter (search, date-range, status), tabel responsif
+        private bool IsAdmin() => User?.IsInRole("AdminWeb") == true;
+        private bool IsRescue() => User?.IsInRole("Rescue") == true;
+        private string GetUserBadge() => User?.FindFirst("BadgeNumber")?.Value ?? "";
+
+        // Index (global) atau per APAR (?id=xxx)
+        // - AdminWeb/Rescue: lihat semua
+        // - User biasa: difilter ke miliknya (berdasarkan BadgeNumber)
         public async Task<IActionResult> Index(int? id)
         {
             try
@@ -35,15 +42,21 @@ namespace AparWebAdmin.Controllers
                 }
 
                 var json = await res.Content.ReadAsStringAsync();
-                // /all: { success, data: [...] }
-                // /history/:id: { success, data: [...] }
                 var wrapper = JsonConvert.DeserializeObject<JObject>(json);
                 var list = wrapper?["data"]?.ToObject<List<Maintenance>>() ?? new();
 
-                // Nilai default untuk null-safety
+                // Null-safety
                 foreach (var m in list)
+                    m.Kondisi ??= "";
+
+                // 🔐 Akses: jika bukan Admin/Rescue → filter by badge milik user
+                if (!IsAdmin() && !IsRescue())
                 {
-                    if (m.Kondisi == null) m.Kondisi = "";
+                    var myBadge = GetUserBadge();
+                    if (!string.IsNullOrWhiteSpace(myBadge))
+                        list = list.Where(x => string.Equals(x.BadgeNumber, myBadge, StringComparison.OrdinalIgnoreCase)).ToList();
+                    else
+                        list = new List<Maintenance>();
                 }
 
                 ViewBag.AparId = id;
@@ -56,7 +69,8 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // Detail pemeriksaan → menampilkan meta, checklist (timeline), foto (gallery), dan status due
+        // Detail pemeriksaan
+        [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
             try
@@ -75,6 +89,18 @@ namespace AparWebAdmin.Controllers
                 {
                     TempData["Error"] = "Data tidak ditemukan";
                     return RedirectToAction(nameof(Index));
+                }
+
+                // 🔐 Akses: Admin/Rescue boleh; selain itu hanya jika BadgeNumber sama
+                if (!IsAdmin() && !IsRescue())
+                {
+                    var myBadge = GetUserBadge();
+                    if (string.IsNullOrWhiteSpace(myBadge) ||
+                        !string.Equals(myBadge, data.BadgeNumber ?? "", StringComparison.OrdinalIgnoreCase))
+                    {
+                        TempData["Error"] = "Anda tidak memiliki akses ke detail maintenance ini.";
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
 
                 // Map checklist
@@ -102,13 +128,24 @@ namespace AparWebAdmin.Controllers
 
         // GET create → ambil detail APAR + checklist via /api/peralatan/with-checklist?id=&badge=
         [HttpGet]
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Create(int id, string? badge)
         {
             try
             {
-                // TODO: ganti badgeNumber sesuai user login
-                badge ??= "BN-01";
-                var res = await _http.GetAsync($"api/peralatan/with-checklist?id={id}&badge={badge}");
+                // 🔐 Ambil badge dari klaim; fallback ke query hanya jika klaim kosong & user Admin
+                var badgeFromClaim = GetUserBadge();
+                var effectiveBadge = !string.IsNullOrWhiteSpace(badgeFromClaim)
+                    ? badgeFromClaim
+                    : (IsAdmin() ? (badge ?? "") : "");
+
+                if (string.IsNullOrWhiteSpace(effectiveBadge))
+                {
+                    TempData["Error"] = "Badge pengguna tidak ditemukan. Silakan login ulang.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var res = await _http.GetAsync($"api/peralatan/with-checklist?id={id}&badge={effectiveBadge}");
                 if (!res.IsSuccessStatusCode)
                 {
                     TempData["Error"] = "Gagal mengambil data apar & checklist";
@@ -118,12 +155,12 @@ namespace AparWebAdmin.Controllers
                 var json = await res.Content.ReadAsStringAsync();
                 var data = JsonConvert.DeserializeObject<Maintenance>(json) ?? new Maintenance();
 
-                // Set properti yang dibutuhkan form
-                data.PeralatanId = data.Id == 0 ? id : data.PeralatanId == 0 ? id : data.PeralatanId;
-                data.BadgeNumber = badge;
+                // Set properti form
+                data.PeralatanId = data.Id == 0 ? id : (data.PeralatanId == 0 ? id : data.PeralatanId);
+                data.BadgeNumber = effectiveBadge;
                 data.TanggalPemeriksaan = DateTime.Now;
 
-                // Build checklist kosong (kalau BE mengembalikan keperluan_check)
+                // Build checklist default jika tersedia keperluan_check
                 try
                 {
                     var root = JObject.Parse(json);
@@ -155,10 +192,21 @@ namespace AparWebAdmin.Controllers
         // POST create → kirim multipart (field + foto) ke /api/perawatan/submit
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Create(Maintenance model, List<IFormFile> fotos)
         {
             try
             {
+                // 🔐 Paksa BadgeNumber dari klaim agar tidak bisa disuntik dari form
+                var badgeFromClaim = GetUserBadge();
+                if (string.IsNullOrWhiteSpace(badgeFromClaim))
+                {
+                    ViewBag.Error = "Badge pengguna tidak ditemukan. Silakan login ulang.";
+                    return View(model);
+                }
+
+                model.BadgeNumber = badgeFromClaim;
+
                 // Bangun multipart form
                 using var multipart = new MultipartFormDataContent();
 
@@ -187,10 +235,12 @@ namespace AparWebAdmin.Controllers
                 // Foto
                 foreach (var file in fotos ?? new())
                 {
-                    if (file.Length <= 0) continue;
-                    var fileContent = new StreamContent(file.OpenReadStream());
-                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
-                    multipart.Add(fileContent, "fotos", file.FileName);
+                    if (file?.Length > 0)
+                    {
+                        var fileContent = new StreamContent(file.OpenReadStream());
+                        fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
+                        multipart.Add(fileContent, "fotos", file.FileName);
+                    }
                 }
 
                 var res = await _http.PostAsync("api/perawatan/submit", multipart);

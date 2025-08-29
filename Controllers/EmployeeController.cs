@@ -1,3 +1,5 @@
+// Controllers/EmployeeController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using AparAppsWebsite.Models;
@@ -5,6 +7,7 @@ using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize(Roles = "AdminWeb")] // 🔒 Hanya AdminWeb yang boleh akses modul Employee
     public class EmployeeController : Controller
     {
         private readonly HttpClient _http;
@@ -73,10 +76,7 @@ namespace AparWebAdmin.Controllers
         }
 
         // GET: /Employee/Create
-        public IActionResult Create()
-        {
-            return View();
-        }
+        public IActionResult Create() => View();
 
         // POST: /Employee/Create
         [HttpPost, ValidateAntiForgeryToken]
@@ -87,7 +87,7 @@ namespace AparWebAdmin.Controllers
 
             try
             {
-                // BE menerima berbagai casing; kita kirim camelCase standar
+                // BE menerima berbagai casing; kirim camelCase standar
                 var payload = new
                 {
                     nama = model.Nama,

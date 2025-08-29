@@ -1,3 +1,5 @@
+// Controllers/IntervalPetugasController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
 using AparAppsWebsite.Models;
@@ -5,6 +7,7 @@ using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
+    [Authorize(Roles = "AdminWeb")] // 🔒 hanya AdminWeb
     public class IntervalPetugasController : Controller
     {
         private readonly HttpClient _http;
