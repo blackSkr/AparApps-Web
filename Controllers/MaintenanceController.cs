@@ -1,4 +1,3 @@
-// Controllers/MaintenanceController.cs
 using AparAppsWebsite.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,10 +5,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Globalization;
 
 namespace AparWebAdmin.Controllers
 {
-    [Authorize] // 🔒 Wajib login
+    [Authorize]
     public class MaintenanceController : Controller
     {
         private readonly HttpClient _http;
@@ -23,14 +23,10 @@ namespace AparWebAdmin.Controllers
         private bool IsRescue() => User?.IsInRole("Rescue") == true;
         private string GetUserBadge() => User?.FindFirst("BadgeNumber")?.Value ?? "";
 
-        // ===== Helpers: normalisasi field BE → model FE =====
         private static void NormalizeMaintenance(Maintenance m)
         {
-            // BE kadang kirim PetugasBadge; model kamu pakai BadgeNumber
             if (string.IsNullOrWhiteSpace(m.BadgeNumber) && !string.IsNullOrWhiteSpace(m.PetugasBadge))
                 m.BadgeNumber = m.PetugasBadge;
-
-            // Null safety umum
             m.Kondisi ??= "";
         }
 
@@ -39,9 +35,6 @@ namespace AparWebAdmin.Controllers
             foreach (var m in list) NormalizeMaintenance(m);
         }
 
-        // Index (global) atau per APAR (?id=xxx)
-        // - AdminWeb/Rescue: lihat semua
-        // - User biasa: difilter ke miliknya (berdasarkan BadgeNumber)
         public async Task<IActionResult> Index(int? id)
         {
             try
@@ -58,23 +51,15 @@ namespace AparWebAdmin.Controllers
 
                 var json = await res.Content.ReadAsStringAsync();
                 var wrapper = JsonConvert.DeserializeObject<JObject>(json);
-
-                // BE balas { success, data: [...] }
                 var list = wrapper?["data"]?.ToObject<List<Maintenance>>() ?? new();
-
-                // 🔧 Normalisasi nama kolom (PetugasBadge → BadgeNumber) + null-safety
                 NormalizeMaintenanceList(list);
 
-                // 🔐 Akses: jika bukan Admin/Rescue → filter by badge milik user
                 if (!IsAdmin() && !IsRescue())
                 {
                     var myBadge = GetUserBadge();
-                    if (!string.IsNullOrWhiteSpace(myBadge))
-                        list = list
-                            .Where(x => string.Equals(x.BadgeNumber ?? "", myBadge, StringComparison.OrdinalIgnoreCase))
-                            .ToList();
-                    else
-                        list = new List<Maintenance>();
+                    list = !string.IsNullOrWhiteSpace(myBadge)
+                        ? list.Where(x => string.Equals(x.BadgeNumber ?? "", myBadge, StringComparison.OrdinalIgnoreCase)).ToList()
+                        : new List<Maintenance>();
                 }
 
                 ViewBag.AparId = id;
@@ -87,7 +72,6 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // Detail pemeriksaan
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -109,10 +93,8 @@ namespace AparWebAdmin.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // 🔧 Samakan field badge & null-safety
                 NormalizeMaintenance(data);
 
-                // 🔐 Akses: Admin/Rescue boleh; selain itu hanya jika BadgeNumber sama
                 if (!IsAdmin() && !IsRescue())
                 {
                     var myBadge = GetUserBadge();
@@ -126,17 +108,27 @@ namespace AparWebAdmin.Controllers
                 }
 
                 // Map checklist
-                var checklistJson = wrapper["data"]?["checklist"]?.ToObject<List<JObject>>() ?? new();
-                data.Checklist = checklistJson.Select(c => new ChecklistJawaban
+                var checklistArr = wrapper?["data"]?["checklist"] as JArray ?? new JArray();
+                data.Checklist = checklistArr.Select(c => new ChecklistJawaban
                 {
-                    ChecklistId = (int)(c["ChecklistId"] ?? 0),
-                    Jawaban = (bool)(c["Dicentang"] ?? false),
+                    ChecklistId = (int?)c["ChecklistId"] ?? 0,
+                    Jawaban = ((bool?)c["Dicentang"]) ?? false,
                     Keterangan = (string?)c["Keterangan"] ?? "",
                     PertanyaanChecklist = (string?)c["Pertanyaan"] ?? ""
                 }).ToList();
 
-                // Map photos
-                data.Photos = wrapper["data"]?["photos"]?.ToObject<List<FotoPemeriksaan>>() ?? new();
+                // NEW: map koordinat (hp.* sudah include)
+                data.Latitude = (double?)wrapper?["data"]?["Latitude"];
+                data.Longitude = (double?)wrapper?["data"]?["Longitude"];
+
+                // Fix foto: gunakan FotoUrl jika ada
+                var photosArr = wrapper?["data"]?["photos"] as JArray ?? new JArray();
+                data.Photos = photosArr.Select(p => new FotoPemeriksaan
+                {
+                    // pakai FotoUrl jika tersedia, else FotoPath
+                    FotoPath = (string?)(p["FotoUrl"] ?? p["FotoPath"]) ?? "",
+                    UploadedAt = (DateTime?)p["UploadedAt"] ?? DateTime.MinValue
+                }).ToList();
 
                 return View(data);
             }
@@ -147,14 +139,12 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // GET create → ambil detail APAR + checklist via /api/peralatan/with-checklist?id=&badge=
         [HttpGet]
         [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Create(int id, string? badge)
         {
             try
             {
-                // 🔐 Ambil badge dari klaim; fallback ke query hanya jika klaim kosong & user Admin
                 var badgeFromClaim = GetUserBadge();
                 var effectiveBadge = !string.IsNullOrWhiteSpace(badgeFromClaim)
                     ? badgeFromClaim
@@ -176,12 +166,10 @@ namespace AparWebAdmin.Controllers
                 var json = await res.Content.ReadAsStringAsync();
                 var data = JsonConvert.DeserializeObject<Maintenance>(json) ?? new Maintenance();
 
-                // Set properti form
                 data.PeralatanId = data.Id == 0 ? id : (data.PeralatanId == 0 ? id : data.PeralatanId);
                 data.BadgeNumber = effectiveBadge;
                 data.TanggalPemeriksaan = DateTime.Now;
 
-                // Build checklist default jika tersedia keperluan_check
                 try
                 {
                     var root = JObject.Parse(json);
@@ -194,12 +182,12 @@ namespace AparWebAdmin.Controllers
                     {
                         ChecklistId = (int)(x["checklistId"] ?? 0),
                         PertanyaanChecklist = (string?)x["Pertanyaan"] ?? "",
-                        Jawaban = true, // default "Baik"
+                        Jawaban = true,
                         Alasan = "",
                         Keterangan = ""
                     }).ToList();
                 }
-                catch { /* fallback jika gagal parse */ }
+                catch { }
 
                 return View(data);
             }
@@ -210,7 +198,6 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // POST create → kirim multipart (field + foto) ke /api/perawatan/submit
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb,Rescue")]
@@ -218,19 +205,15 @@ namespace AparWebAdmin.Controllers
         {
             try
             {
-                // 🔐 Paksa BadgeNumber dari klaim agar tidak bisa disuntik dari form
                 var badgeFromClaim = GetUserBadge();
                 if (string.IsNullOrWhiteSpace(badgeFromClaim))
                 {
                     ViewBag.Error = "Badge pengguna tidak ditemukan. Silakan login ulang.";
                     return View(model);
                 }
-
                 model.BadgeNumber = badgeFromClaim;
 
-                // Bangun multipart form
                 using var multipart = new MultipartFormDataContent();
-
                 multipart.Add(new StringContent(model.PeralatanId.ToString()), "aparId");
                 multipart.Add(new StringContent(model.BadgeNumber ?? ""), "badgeNumber");
                 multipart.Add(new StringContent(model.TanggalPemeriksaan.ToString("yyyy-MM-dd")), "tanggal");
@@ -239,10 +222,15 @@ namespace AparWebAdmin.Controllers
                 multipart.Add(new StringContent(model.CatatanMasalah ?? ""), "catatanMasalah");
                 multipart.Add(new StringContent(model.Rekomendasi ?? ""), "rekomendasi");
                 multipart.Add(new StringContent(model.TindakLanjut ?? ""), "tindakLanjut");
-                multipart.Add(new StringContent(model.Tekanan?.ToString() ?? ""), "tekanan");
+                multipart.Add(new StringContent(model.Tekanan?.ToString(CultureInfo.InvariantCulture) ?? ""), "tekanan");
                 multipart.Add(new StringContent(model.JumlahMasalah?.ToString() ?? ""), "jumlahMasalah");
 
-                // Checklist → {checklistId, condition: "Baik"/"Tidak", alasan}
+                // NEW: kirim lat/long jika ada (BE sudah support)
+                if (model.Latitude.HasValue)
+                    multipart.Add(new StringContent(model.Latitude.Value.ToString(CultureInfo.InvariantCulture)), "latitude");
+                if (model.Longitude.HasValue)
+                    multipart.Add(new StringContent(model.Longitude.Value.ToString(CultureInfo.InvariantCulture)), "longitude");
+
                 var checklistJson = JsonConvert.SerializeObject(
                     (model.Checklist ?? new()).Select(c => new
                     {
@@ -253,14 +241,13 @@ namespace AparWebAdmin.Controllers
                 );
                 multipart.Add(new StringContent(checklistJson, Encoding.UTF8, "application/json"), "checklist");
 
-                // Foto
                 foreach (var file in fotos ?? new())
                 {
                     if (file?.Length > 0)
                     {
                         var fileContent = new StreamContent(file.OpenReadStream());
                         fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType ?? "application/octet-stream");
-                        multipart.Add(fileContent, "fotos", file.FileName);
+                        multipart.Add(fileContent, "fotos", file.FileName); // kompatibel field lama
                     }
                 }
 

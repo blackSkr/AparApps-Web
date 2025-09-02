@@ -12,69 +12,35 @@
 }
 
 <style>
-    /* --- micro styles to elevate look --- */
     .page-actions .btn { border-radius: .5rem; }
-    .stat-tile {
-        background: var(--bs-light);
-        border-radius: .75rem;
-        padding: 1rem;
-        height: 100%;
-        border: 1px solid rgba(0,0,0,.05);
-    }
+    .stat-tile { background: var(--bs-light); border-radius: .75rem; padding: 1rem; height: 100%; border: 1px solid rgba(0,0,0,.05); }
     .stat-tile .label { font-size:.8rem; color: var(--bs-secondary); text-transform: uppercase; letter-spacing: .03em; }
     .list-check .status-pill { min-width: 72px; text-align:center; }
-    .meta-grid .meta {
-        display:flex; gap:.75rem; align-items:flex-start; padding:.5rem 0; border-bottom:1px dashed rgba(0,0,0,.06);
-    }
+    .meta-grid .meta { display:flex; gap:.75rem; align-items:flex-start; padding:.5rem 0; border-bottom:1px dashed rgba(0,0,0,.06); }
     .meta-grid .meta:last-child { border-bottom:0; }
-    .meta .meta-icon {
-        width: 36px; height:36px; display:flex; align-items:center; justify-content:center;
-        border-radius:.5rem; background: var(--bs-light);
-    }
-    .badge-soft {
-        background: rgba(0,0,0,.05); color: var(--bs-body-color); border:1px solid rgba(0,0,0,.06);
-    }
-    .timeline {
-        position: relative; padding-left: 1.25rem;
-    }
-    .timeline::before {
-        content:""; position:absolute; left:.45rem; top:.2rem; bottom:.2rem; width:2px; background: rgba(0,0,0,.1);
-    }
-    .timeline .t-item { position:relative; padding:.5rem 0 .5rem 0; }
-    .timeline .t-item::before {
-        content:""; position:absolute; left:-.06rem; top:.8rem; width:.7rem; height:.7rem; border-radius:50%; background: var(--bs-primary);
-        box-shadow: 0 0 0 3px rgba(13,110,253,.15);
-    }
+    .meta .meta-icon { width: 36px; height:36px; display:flex; align-items:center; justify-content:center; border-radius:.5rem; background: var(--bs-light); }
+    .badge-soft { background: rgba(0,0,0,.05); color: var(--bs-body-color); border:1px solid rgba(0,0,0,.06); }
     .photo-card img { object-fit:cover; width:100%; height:140px; border-radius:.5rem; }
     .sticky-side { position: sticky; top: 1rem; }
-    /* === Timeline (rapi) === */
-.tline { position: relative; margin: .25rem 0 0 0; padding-right: 1.75rem; }
-.tline::before {
-    content:""; position:absolute; left:.62rem; top:.4rem; bottom:.4rem; width:2px; background: rgba(0,0,0,.08);
-}
-.tline-item { position: relative; display:flex; gap:.75rem; padding:.35rem 0; }
-.tline-point {
-    position: absolute; left:.25rem; top:.55rem; width:.9rem; height:.9rem; border-radius:50%;
-    display:flex; align-items:center; justify-content:center; background:#fff; border:2px solid var(--bs-primary);
-    box-shadow: 0 0 0 3px rgba(13,110,253,.10);
-}
-.tline-body { margin-left:.75rem; }
-.tline-title { font-weight:600; line-height:1.2; padding-left: 15px; }
-.tline-meta { font-size:.875rem; color: var(--bs-secondary-color, #6c757d); padding-left: 15px;}
-.tline-badge {
-    font-size:.75rem; border-radius:.35rem; padding:.15rem .45rem; border:1px solid rgba(0,0,0,.06); background: var(--bs-light);
-}
 
-/* warna status pada titik */
-.tline-point.success { border-color: var(--bs-success); box-shadow: 0 0 0 3px rgba(25,135,84,.12); }
-.tline-point.warning { border-color: var(--bs-warning); box-shadow: 0 0 0 3px rgba(255,193,7,.18); }
-.tline-point.danger  { border-color: var(--bs-danger);  box-shadow: 0 0 0 3px rgba(220,53,69,.16); }
+    /* Timeline rapi */
+    .tline { position: relative; margin: .25rem 0 0 0; padding-right: 1.75rem; }
+    .tline::before { content:""; position:absolute; left:.62rem; top:.4rem; bottom:.4rem; width:2px; background: rgba(0,0,0,.08); }
+    .tline-item { position: relative; display:flex; gap:.75rem; padding:.35rem 0; }
+    .tline-point { position: absolute; left:.25rem; top:.55rem; width:.9rem; height:.9rem; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#fff; border:2px solid var(--bs-primary); box-shadow: 0 0 0 3px rgba(13,110,253,.10); }
+    .tline-body { margin-left:.75rem; }
+    .tline-title { font-weight:600; line-height:1.2; padding-left: 15px; }
+    .tline-meta { font-size:.875rem; color: var(--bs-secondary-color, #6c757d); padding-left: 15px;}
+    .tline-badge { font-size:.75rem; border-radius:.35rem; padding:.15rem .45rem; border:1px solid rgba(0,0,0,.06); background: var(--bs-light); }
+    .tline-point.success { border-color: var(--bs-success); box-shadow: 0 0 0 3px rgba(25,135,84,.12); }
+    .tline-point.warning { border-color: var(--bs-warning); box-shadow: 0 0 0 3px rgba(255,193,7,.18); }
+    .tline-point.danger  { border-color: var(--bs-danger);  box-shadow: 0 0 0 3px rgba(220,53,69,.16); }
 
-    @@media (max-width: 991.98px) { .sticky-side { position: static; } } /* Razor-safe: use @@media */
+    @@media (max-width: 991.98px) { .sticky-side { position: static; } }
 </style>
 
 <div class="container-fluid">
-    <!-- Header / Breadcrumbs / Actions -->
+    <!-- Header -->
     <div class="row g-3 align-items-center">
         <div class="col">
             <nav aria-label="breadcrumb">
@@ -100,7 +66,7 @@
     <div class="row g-3">
         <!-- LEFT -->
         <div class="col-lg-8">
-            <!-- Summary Card -->
+            <!-- Summary -->
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-body">
                     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
@@ -120,9 +86,6 @@
                             </div>
                         </div>
                         <div class="text-end">
-                            <div class="mb-2">
-                                @* <span class="badge bg-@Model.KondisiBadge"><i class="fas fa-stethoscope"></i> Kondisi: @Model.Kondisi</span> *@
-                            </div>
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <span class="badge bg-@Model.StatusBadge">@Model.StatusText</span>
                                 <span class="small @((isOverdue)? "text-danger fw-semibold" : isDueSoon ? "text-warning fw-semibold" : "text-muted")">
@@ -203,7 +166,6 @@
                         </div>
                     }
 
-                    <!-- Meta quick facts -->
                     <hr />
                     <div class="row meta-grid">
                         <div class="col-md-6">
@@ -234,11 +196,15 @@
                                 <div class="meta-icon"><i class="far fa-user"></i></div>
                                 <div>
                                     <div class="small text-muted">Petugas</div>
-                                    <div class="fw-semibold">@Model.PetugasBadge @if(!string.IsNullOrWhiteSpace(Model.PetugasRole)){<span class="text-muted">· @Model.PetugasRole</span>}</div>
+                                    <div class="fw-semibold">
+                                        @Model.PetugasBadge
+                                        @if(!string.IsNullOrWhiteSpace(Model.PetugasRole)){<span class="text-muted">· @Model.PetugasRole</span>}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -290,85 +256,97 @@
         <div class="col-lg-4">
             <div class="sticky-side">
                 <!-- Status & Due -->
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light d-flex align-items-center justify-content-between">
-        <strong>Status Pemeriksaan</strong>
-        <span class="tline-badge">
-            @(Model.NextDueDate == default ? "Jatuh tempo: -" : $"Jatuh tempo: {Model.NextDueDate:dd MMM yyyy}")
-        </span>
-    </div>
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-light d-flex align-items-center justify-content-between">
+                        <strong>Status Pemeriksaan</strong>
+                        <span class="tline-badge">
+                            @(Model.NextDueDate == default ? "Jatuh tempo: -" : $"Jatuh tempo: {Model.NextDueDate:dd MMM yyyy}")
+                        </span>
+                    </div>
 
-    <div class="card-body">
-        <!-- badges ringkas -->
-        <div class="d-flex flex-wrap gap-2 mb-3">
-            <span class="badge bg-@Model.KondisiBadge"><i class="fas fa-heartbeat"></i> @Model.Kondisi</span>
-            <span class="badge bg-@Model.StatusBadge">@Model.StatusText</span>
-            @{
-                var dueBadgeClass = (isOverdue) ? "bg-danger" : (isDueSoon ? "bg-warning text-dark" : "bg-success");
-                var dueText = (Model.NextDueDate == default) ? "-" : Model.NextDueDate.ToString("dd MMM yyyy");
-            }
-            <span class="badge @dueBadgeClass">
-                <i class="far fa-clock"></i> @dueText
-            </span>
-        </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <span class="badge bg-@Model.KondisiBadge"><i class="fas fa-heartbeat"></i> @Model.Kondisi</span>
+                            <span class="badge bg-@Model.StatusBadge">@Model.StatusText</span>
+                            @{
+                                var dueBadgeClass = (isOverdue) ? "bg-danger" : (isDueSoon ? "bg-warning text-dark" : "bg-success");
+                                var dueText = (Model.NextDueDate == default) ? "-" : Model.NextDueDate.ToString("dd MMM yyyy");
+                            }
+                            <span class="badge @dueBadgeClass"><i class="far fa-clock"></i> @dueText</span>
+                        </div>
 
-        <!-- timeline rapi -->
-        <div class="tline">
-            <!-- Item 1: Tanggal Pemeriksaan -->
-            <div class="tline-item">
-                <span class="tline-point success" aria-hidden="true"></span>
-                <div class="tline-body">
-                    <div class="tline-title">Tanggal Pemeriksaan</div>
-                    <div class="tline-meta">
-                        <i class="far fa-calendar-check"></i>
-                        @Model.TanggalPemeriksaan.ToString("dddd, dd MMM yyyy")
+                        <div class="tline">
+                            <div class="tline-item">
+                                <span class="tline-point success" aria-hidden="true"></span>
+                                <div class="tline-body">
+                                    <div class="tline-title">Tanggal Pemeriksaan</div>
+                                    <div class="tline-meta"><i class="far fa-calendar-check"></i> @Model.TanggalPemeriksaan.ToString("dddd, dd MMM yyyy")</div>
+                                </div>
+                            </div>
+
+                            @{
+                                var nextDueClass = isOverdue ? "danger" : (isDueSoon ? "warning" : "success");
+                                var nextDueText  = (Model.NextDueDate == default) ? "-" : Model.NextDueDate.ToString("dddd, dd MMM yyyy");
+                                var nextDueIcon  = isOverdue ? "fas fa-exclamation-circle"
+                                                 : isDueSoon ? "fas fa-exclamation-triangle"
+                                                 : "far fa-calendar";
+                            }
+                            <div class="tline-item">
+                                <span class="tline-point @nextDueClass" aria-hidden="true"></span>
+                                <div class="tline-body">
+                                    <div class="tline-title">Jadwal Berikutnya</div>
+                                    <div class="tline-meta">
+                                        <i class="@nextDueIcon"></i> @nextDueText
+                                        @if (isOverdue) { <span class="ms-2 badge bg-danger">Terlambat</span> }
+                                        else if (isDueSoon) { <span class="ms-2 badge bg-warning text-dark">Mendekati</span> }
+                                        else if (Model.NextDueDate != default) { <span class="ms-2 badge bg-success">Aman</span> }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Item 2: Jadwal Berikutnya -->
-            @{
-                var nextDueClass = isOverdue ? "danger" : (isDueSoon ? "warning" : "success");
-                var nextDueText  = (Model.NextDueDate == default) ? "-" : Model.NextDueDate.ToString("dddd, dd MMM yyyy");
-                var nextDueIcon  = isOverdue ? "fas fa-exclamation-circle"
-                                 : isDueSoon ? "fas fa-exclamation-triangle"
-                                 : "far fa-calendar";
-            }
-            <div class="tline-item">
-                <span class="tline-point @nextDueClass" aria-hidden="true"></span>
-                <div class="tline-body">
-                    <div class="tline-title">Jadwal Berikutnya</div>
-                    <div class="tline-meta">
-                        <i class="@nextDueIcon"></i> @nextDueText
-                        @if (isOverdue)
-                        {
-                            <span class="ms-2 badge bg-danger">Terlambat</span>
-                        }
-                        else if (isDueSoon)
-                        {
-                            <span class="ms-2 badge bg-warning text-dark">Mendekati</span>
-                        }
-                        else if (Model.NextDueDate != default)
-                        {
-                            <span class="ms-2 badge bg-success">Aman</span>
-                        }
+                <!-- Baru: Lokasi Saat Inspeksi (lat/long) -->
+                @if (Model.Latitude.HasValue && Model.Longitude.HasValue)
+                {
+                    <div class="card border-0 shadow-sm mb-3">
+                        <div class="card-header bg-light d-flex align-items-center justify-content-between">
+                            <strong>Lokasi Saat Inspeksi</strong>
+                            <span class="badge badge-soft">GPS</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="small text-muted">Koordinat</div>
+                                    <div class="fw-semibold">
+                                        <span id="coordText">
+                                            @Model.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                            @Model.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a class="btn btn-sm btn-outline-primary"
+                                       href="@( $"https://www.google.com/maps?q={Model.Latitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)},{Model.Longitude.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}" )"
+                                       target="_blank" rel="noopener">
+                                        <i class="fas fa-map-marked-alt"></i> Buka di Maps
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCopyCoord" data-bs-toggle="tooltip" title="Salin koordinat">
+                                        <i class="far fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="small text-muted mt-2">* Koordinat ini berasal dari lokasi petugas saat inspeksi.</div>
+                        </div>
                     </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
+                }
 
                 <!-- Photos -->
                 <div class="card border-0 shadow-sm">
                     <div class="card-header bg-light d-flex align-items-center justify-content-between">
                         <strong>Foto Pemeriksaan</strong>
-                        @if (Model.Photos?.Count > 0)
-                        {
-                            <span class="badge badge-soft">@Model.Photos.Count foto</span>
-                        }
+                        @if (Model.Photos?.Count > 0) { <span class="badge badge-soft">@Model.Photos.Count foto</span> }
                     </div>
                     <div class="card-body">
                         @if (Model.Photos?.Count > 0)
@@ -376,9 +354,11 @@
                             <div class="row g-2">
                                 @foreach(var p in Model.Photos)
                                 {
+                                    // Gunakan Url.Content agar path relatif /uploads/... aman
+                                    var src = Url.Content(p.FotoPath ?? "");
                                     <div class="col-6">
-                                        <a href="@p.FotoPath" class="d-block photo-card" data-bs-toggle="modal" data-bs-target="#photoModal" data-photo="@p.FotoPath" data-time="@p.UploadedAt">
-                                            <img src="@p.FotoPath" alt="Foto pemeriksaan" />
+                                        <a href="@src" class="d-block photo-card" data-bs-toggle="modal" data-bs-target="#photoModal" data-photo="@src" data-time="@p.UploadedAt">
+                                            <img src="@src" alt="Foto pemeriksaan" class="img-fluid rounded" style="object-fit:cover; width:100%; height:140px;" loading="lazy" />
                                         </a>
                                         <div class="small text-muted mt-1">
                                             <i class="far fa-clock"></i> @p.UploadedAt
@@ -425,6 +405,20 @@
     document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
         if (window.bootstrap && bootstrap.Tooltip) new bootstrap.Tooltip(el);
     });
+
+    // Copy koordinat
+    const btnCopy = document.getElementById('btnCopyCoord');
+    if (btnCopy){
+      btnCopy.addEventListener('click', async ()=>{
+        const text = document.getElementById('coordText')?.innerText?.trim() || '';
+        try {
+          await navigator.clipboard.writeText(text);
+          const prev = btnCopy.innerHTML;
+          btnCopy.innerHTML = '<i class="fas fa-check"></i>';
+          setTimeout(()=>btnCopy.innerHTML = prev, 1200);
+        } catch {}
+      });
+    }
 
     // Photo modal viewer
     const photoModal = document.getElementById('photoModal');

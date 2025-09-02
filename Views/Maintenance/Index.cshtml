@@ -5,12 +5,20 @@
     var total = Model?.Count ?? 0;
     var overdue = Model?.Count(x => x.IsOverdue) ?? 0;
     var dueSoon = Model?.Count(x => x.IsDueSoon) ?? 0;
-    var ok = total - overdue - dueSoon;
+
+    // Baru: hitung pemeriksaan bermasalah (Tidak Baik)
+    var problems = Model?.Count(x =>
+    (!string.Equals(x.Kondisi ?? "", "Baik", StringComparison.OrdinalIgnoreCase)) ||
+    ((x.JumlahMasalah ?? 0) > 0)
+    ) ?? 0;
+
+    var okDue = total - overdue - dueSoon;
 
     int pct(int part, int whole) => whole > 0 ? (int)Math.Round(100.0 * part / whole) : 0;
     var pOverdue = pct(overdue, total);
     var pSoon = pct(dueSoon, total);
-    var pOk = pct(ok, total);
+    var pOkDue = pct(okDue, total);
+    var pProb = pct(problems, total);
 }
 
 <style>
@@ -60,6 +68,11 @@
         background: rgba(25, 135, 84, .03);
     }
 
+    /* Baru: highlight baris “Tidak Baik” */
+    .row-problem {
+        background: rgba(220, 53, 69, .06);
+    }
+
     .sticky-tools {
         position: sticky;
         top: .5rem;
@@ -94,8 +107,6 @@
             position: static;
         }
     }
-
-    /* Razor-safe @@media */
 </style>
 
 <div class="container-fluid">
@@ -135,13 +146,13 @@
         <div class="col-md-3 col-6">
             <div class="card kpi-card border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="kpi-label">Overdue</div>
+                    <div class="kpi-label">Tidak Baik</div>
                     <div class="d-flex align-items-baseline gap-2">
-                        <div class="h3 mb-0 text-danger">@overdue</div>
-                        <div class="text-danger small">(@pOverdue%)</div>
+                        <div class="h3 mb-0 text-danger">@problems</div>
+                        <div class="text-danger small">(@pProb%)</div>
                     </div>
                     <div class="progress progress-thin">
-                        <div class="progress-bar bg-danger" style="width:@pOverdue%"></div>
+                        <div class="progress-bar bg-danger" style="width:@pProb%"></div>
                     </div>
                 </div>
             </div>
@@ -163,13 +174,13 @@
         <div class="col-md-3 col-6">
             <div class="card kpi-card border-0 shadow-sm">
                 <div class="card-body">
-                    <div class="kpi-label">OK</div>
+                    <div class="kpi-label">OK (Due)</div>
                     <div class="d-flex align-items-baseline gap-2">
-                        <div class="h3 mb-0 text-success">@ok</div>
-                        <div class="text-success small">(@pOk%)</div>
+                        <div class="h3 mb-0 text-success">@okDue</div>
+                        <div class="text-success small">(@pOkDue%)</div>
                     </div>
                     <div class="progress progress-thin">
-                        <div class="progress-bar bg-success" style="width:@pOk%"></div>
+                        <div class="progress-bar bg-success" style="width:@pOkDue%"></div>
                     </div>
                 </div>
             </div>
@@ -193,6 +204,17 @@
                                 <option value="ok">OK</option>
                             </select>
                         </div>
+
+                        <!-- Baru: filter Hasil -->
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">Hasil</label>
+                            <select id="resultSelect" class="form-select">
+                                <option value="">Semua</option>
+                                <option value="baik">Baik</option>
+                                <option value="tidak">Tidak Baik</option>
+                            </select>
+                        </div>
+
                         <div class="col-md-2">
                             <label class="form-label small text-muted">Dari Tanggal</label>
                             <input id="dateFrom" type="date" class="form-control">
@@ -209,8 +231,7 @@
                     </div>
 
                     <div class="mt-2 legend d-flex flex-wrap gap-2">
-                        @* <span class="badge filter-chip"><i class="fas fa-search"></i> Filter aktif muncul sebagai hasil di tabel</span> *@
-                        <span class="badge bg-danger">Overdue</span>
+                        <span class="badge bg-danger">Tidak Baik</span>
                         <span class="badge bg-warning text-dark">Due Soon</span>
                         <span class="badge bg-success">OK</span>
                     </div>
@@ -247,7 +268,7 @@
                                         <th data-sort="tgl">Tanggal Pemeriksaan <span class="sort-ind">↕</span></th>
                                         <th data-sort="lokasi">Lokasi <span class="sort-ind">↕</span></th>
                                         <th data-sort="jenis">Jenis <span class="sort-ind">↕</span></th>
-                                        <th>Kondisi</th>
+                                        <th>Hasil</th>
                                         <th data-sort="due">Next Due <span class="sort-ind">↕</span></th>
                                         <th>Status</th>
                                         <th class="text-end">Aksi</th>
@@ -256,12 +277,20 @@
                                 <tbody>
                                     @foreach (var m in Model.OrderByDescending(x => x.TanggalPemeriksaan))
                                     {
-                                        var rowClass = m.IsOverdue ? "row-status-overdue"
-                                        : m.IsDueSoon ? "row-status-duesoon" : "row-status-ok";
+                                        var hasProblem = (!string.Equals(m.Kondisi ?? "", "Baik",
+                                        StringComparison.OrdinalIgnoreCase)) || ((m.JumlahMasalah ?? 0) > 0);
+
+                                        var rowClass =
+                                        hasProblem ? "row-problem" :
+                                        m.IsOverdue ? "row-status-overdue" :
+                                        m.IsDueSoon ? "row-status-duesoon" : "row-status-ok";
+
                                         <tr class="@rowClass" data-kode="@m.AparKode" data-lokasi="@m.LokasiNama"
                                             data-jenis="@m.JenisNama" data-tgl="@m.TanggalPemeriksaan.ToString("yyyy-MM-dd")"
                                             data-due="@m.NextDueDate.ToString("yyyy-MM-dd")"
-                                            data-status="@(m.IsOverdue ? "overdue" : m.IsDueSoon ? "duesoon" : "ok")">
+                                            data-status="@(m.IsOverdue ? "overdue" : m.IsDueSoon ? "duesoon" : "ok")"
+                                            data-result="@(hasProblem ? "tidak" : "baik")"
+                                            data-problem="@(hasProblem ? "1" : "0")">
                                             <td><span class="badge bg-primary">@m.AparKode</span></td>
                                             <td>
                                                 <span class="d-block">@m.TanggalPemeriksaan.ToString("dd MMM yyyy")</span>
@@ -269,11 +298,21 @@
                                             </td>
                                             <td><span class="badge bg-secondary">@m.LokasiNama</span></td>
                                             <td><span class="badge bg-info text-dark">@m.JenisNama</span></td>
-                                            <td><span class="badge bg-@m.KondisiBadge">@m.Kondisi</span></td>
                                             <td>
-                                                @(m.NextDueDate == default
-                                                                                        ? Html.Raw("<span class='text-muted'>-</span>")
-                                                                                        : Html.Raw($"<span>{m.NextDueDate:dd MMM yyyy}</span>"))
+                                                <span class="badge bg-@(hasProblem ? "danger" : "success")">
+                                                    @(hasProblem ? "Tidak Baik" : "Baik")
+                                                </span>
+                                                @if ((m.JumlahMasalah ?? 0) > 0)
+                                                {
+                                                    <span class="badge badge-soft ms-1">
+                                                        <i class="fas fa-exclamation-triangle"></i> @(m.JumlahMasalah)
+                                                    </span>
+                                                }
+                                        </td>
+                                        <td>
+                                            @(m.NextDueDate == default
+                                                                                    ? Html.Raw("<span class='text-muted'>-</span>")
+                                                                                    : Html.Raw($"<span>{m.NextDueDate:dd MMM yyyy}</span>"))
                                             </td>
                                             <td><span class="badge bg-@m.StatusBadge">@m.StatusText</span></td>
                                             <td class="text-end">
@@ -287,8 +326,9 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="small text-muted mt-2">Menampilkan <span id="shownCount">@total</span> dari @total
-                            entri.</div>
+                        <div class="small text-muted mt-2">
+                            Menampilkan <span id="shownCount">@total</span> dari @total entri.
+                        </div>
                     }
                 </div>
             </div>
@@ -307,21 +347,19 @@
 
             const searchBox = $('#searchBox');
             const statusSel = $('#statusSelect');
+            const resultSel = $('#resultSelect'); // baru
             const df = $('#dateFrom'), dt = $('#dateTo');
             const btnReset = $('#btnReset');
             const btnExport = $('#btnExport');
             const shownCount = $('#shownCount');
 
-            function parseDate(str) { // yyyy-MM-dd -> Date
-                if (!str) return null;
-                const [y, m, d] = str.split('-').map(Number);
-                return new Date(y, (m || 1) - 1, d || 1);
-            }
+            function parseDate(str) { if (!str) return null; const [y, m, d] = str.split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); }
 
             function applyFilter() {
                 if (!tbody) return;
                 const qtext = (searchBox?.value || '').toLowerCase();
                 const st = statusSel?.value || '';
+                const rs = resultSel?.value || ''; // hasil
                 const dfrom = df?.value ? parseDate(df.value) : null;
                 const dto = dt?.value ? parseDate(dt.value) : null;
 
@@ -332,10 +370,12 @@
                     const jenis = (tr.dataset.jenis || '').toLowerCase();
                     const tgl = parseDate(tr.dataset.tgl);
                     const sts = tr.dataset.status;
+                    const res = tr.dataset.result;
 
                     let ok = true;
                     if (qtext) ok = (kode.includes(qtext) || lokasi.includes(qtext) || jenis.includes(qtext));
                     if (ok && st) ok = (sts === st);
+                    if (ok && rs) ok = (res === rs);
                     if (ok && dfrom && tgl) ok = (tgl >= dfrom);
                     if (ok && dto && tgl) ok = (tgl <= dto);
 
@@ -348,13 +388,14 @@
             function resetFilter() {
                 if (searchBox) searchBox.value = '';
                 if (statusSel) statusSel.value = '';
+                if (resultSel) resultSel.value = ''; // reset baru
                 if (df) df.value = '';
                 if (dt) dt.value = '';
                 applyFilter();
             }
 
-            // Simple sort (client-side)
-            let sortState = { key: 'tgl', dir: 'desc' }; // default
+            // Sort
+            let sortState = { key: 'tgl', dir: 'desc' };
             function sortBy(key) {
                 if (!tbody) return;
                 sortState.dir = (sortState.key === key && sortState.dir === 'asc') ? 'desc' : 'asc';
@@ -373,12 +414,10 @@
                 };
                 rows.sort((a, b) => {
                     const va = getVal(a), vb = getVal(b);
-                    // date-aware when key is tgl/due (yyyy-MM-dd comparable string)
                     if (key === 'tgl' || key === 'due') {
                         if (va === vb) return 0;
                         return (sortState.dir === 'asc') ? va.localeCompare(vb) : vb.localeCompare(va);
                     }
-                    // text compare
                     const cmp = va.localeCompare(vb);
                     return (sortState.dir === 'asc') ? cmp : -cmp;
                 });
@@ -387,20 +426,15 @@
 
             function initSortHeaders() {
                 $$('#tblMaint thead th[data-sort]').forEach(th => {
-                    th.addEventListener('click', () => {
-                        sortBy(th.dataset.sort);
-                        applyFilter(); // keep filter after sort
-                    });
+                    th.addEventListener('click', () => { sortBy(th.dataset.sort); applyFilter(); });
                 });
-                // initial sort by date desc (already server-ordered, but ensure state)
                 sortBy('tgl');
             }
 
             function exportCSV() {
                 if (!tbody) return;
-                // Only export visible rows
                 const visibleRows = $$('#tblMaint tbody tr').filter(tr => tr.style.display !== 'none');
-                const header = ['Kode', 'Tanggal Pemeriksaan', 'Lokasi', 'Jenis', 'Kondisi', 'Next Due', 'Status'];
+                const header = ['Kode', 'Tanggal Pemeriksaan', 'Lokasi', 'Jenis', 'Hasil', 'Next Due', 'Status'];
                 const lines = [header.join(',')];
 
                 const esc = v => {
@@ -415,10 +449,10 @@
                     const tgl = tds[1]?.querySelector('span')?.innerText.trim() || tds[1]?.innerText.trim();
                     const lokasi = tds[2]?.innerText.trim();
                     const jenis = tds[3]?.innerText.trim();
-                    const kondisi = tds[4]?.innerText.trim();
+                    const hasil = tds[4]?.innerText.trim();
                     const due = tds[5]?.innerText.trim();
                     const status = tds[6]?.innerText.trim();
-                    lines.push([kode, tgl, lokasi, jenis, kondisi, due, status].map(esc).join(','));
+                    lines.push([kode, tgl, lokasi, jenis, hasil, due, status].map(esc).join(','));
                 });
 
                 const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -430,8 +464,7 @@
                 setTimeout(() => URL.revokeObjectURL(url), 500);
             }
 
-            // Events
-            [searchBox, statusSel, df, dt].forEach(el => el && el.addEventListener('input', applyFilter));
+            [searchBox, statusSel, resultSel, df, dt].forEach(el => el && el.addEventListener('input', applyFilter));
             if (btnReset) btnReset.addEventListener('click', resetFilter);
             if (btnExport) btnExport.addEventListener('click', exportCSV);
 
