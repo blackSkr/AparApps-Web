@@ -11,7 +11,11 @@ namespace AparAppsWebsite.Models
         [Required(ErrorMessage = "Nama lokasi wajib diisi.")]
         public string? Nama { get; set; }
 
-        // ⛔ Tanpa [Range] supaya tidak memicu validasi client-side
+        // ✅ Field baru (opsional)
+        [Display(Name = "Detail Nama Lokasi (opsional)")]
+        [MaxLength(500)]
+        public string? DetailNamaLokasi { get; set; }
+
         [Display(Name = "Latitude")]
         public double? lat { get; set; }
 
@@ -30,18 +34,10 @@ namespace AparAppsWebsite.Models
         public List<PetugasOption> PICOptions { get; set; } = new();
         public List<PetugasListItemVM> CurrentPetugas { get; set; } = new();
 
-        /// <summary>
-        /// Normalisasi koordinat:
-        /// - Ganti koma -> titik (di controller & view juga disanitasi)
-        /// - Auto-swap jika kebalik (lat > 90 dan lon <= 90)
-        /// - Pembulatan 6 desimal
-        /// - Clamp ke rentang valid jika masih out-of-range tipis
-        /// </summary>
         public (double? lat6, double? lon6) NormalizeLatLon()
         {
             double? la = lat, lo = @long;
 
-            // Auto-swap jika kebalik
             if (la.HasValue && lo.HasValue && Math.Abs(la.Value) > 90 && Math.Abs(lo.Value) <= 90)
             { var t = la; la = lo; lo = t; }
 
@@ -52,7 +48,6 @@ namespace AparAppsWebsite.Models
                 return r == 0 ? 0 : r;
             }
 
-            // Clamp lembut supaya tetap valid
             static double? Clamp(double? x, double min, double max)
             {
                 if (!x.HasValue) return null;

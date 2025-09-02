@@ -118,6 +118,8 @@
         <dl class="kv">
           <dt>Nama</dt>
           <dd>@(Model.Nama ?? "—")</dd>
+          <dt>Detail Nama Lokasi</dt>
+          <dd>@(string.IsNullOrWhiteSpace(Model.DetailNamaLokasi) ? "—" : Model.DetailNamaLokasi)</dd>
 
           <dt>Latitude</dt>
           <dd class="d-flex align-items-center gap-2">

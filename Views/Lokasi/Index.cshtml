@@ -43,7 +43,13 @@ else
         @foreach (var x in Model.items)
         {
           <tr>
-            <td>@x.Nama</td>
+            <td>
+              <div class="fw-semibold">@x.Nama</div>
+              @if (!string.IsNullOrWhiteSpace(x.DetailNamaLokasi))
+              {
+                <div class="text-muted small">@x.DetailNamaLokasi</div>
+              }
+            </td>
             <td class="small text-muted">@x.lat, @(x.@long)</td>
             <td>
               <div>@x.PIC_Nama</div>

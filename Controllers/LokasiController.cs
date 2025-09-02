@@ -1,4 +1,3 @@
-// Controllers/LokasiController.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,9 +8,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
-using System.Security.Claims;
+using System.Net.Http; // ← pastikan ada di bagian using
 
-// ===== Alias model inti =====
+// Alias
 using AparLokasi = AparAppsWebsite.Models.Lokasi;
 using AparLokasiListVM = AparAppsWebsite.Models.LokasiListVM;
 using AparLokasiFormVM = AparAppsWebsite.Models.LokasiFormVM;
@@ -21,14 +20,14 @@ using AparPetugasListItemVM = AparAppsWebsite.Models.PetugasListItemVM;
 
 namespace AparWebAdmin.Controllers
 {
-    [Authorize] // 🔒 Wajib login untuk semua aksi di controller ini
+    [Authorize]
     public class LokasiController : Controller
     {
         private readonly HttpClient _http;
         private readonly ILogger<LokasiController> _log;
 
-        #region Endpoint Paths
-        private const string LOKASI_BASE = "api/lokasi"; // Base address di Program.cs untuk ApiClient
+        #region Paths
+        private const string LOKASI_BASE = "api/lokasi";
         private static string PathList() => $"{LOKASI_BASE}";
         private static string PathCreate() => $"{LOKASI_BASE}";
         private static string PathById(int id) => $"{LOKASI_BASE}/{id}";
@@ -46,62 +45,26 @@ namespace AparWebAdmin.Controllers
             _log = log;
         }
 
-        // =========================
-        // ===== Role Helpers  =====
-        // =========================
         private bool IsAdmin() => User?.IsInRole("AdminWeb") == true;
         private bool IsRescue() => User?.IsInRole("Rescue") == true;
         private string GetUserBadge() => User?.FindFirst("BadgeNumber")?.Value ?? "";
 
-        private bool UserHasAccessToLokasi(AparLokasi lokasi, IEnumerable<PetugasListItemFallback> items)
-        {
-            if (IsAdmin() || IsRescue()) return true;
-
-            var myBadge = GetUserBadge();
-            if (string.IsNullOrWhiteSpace(myBadge)) return false;
-
-            // Akses jika user adalah PIC lokasi
-            if (!string.IsNullOrWhiteSpace(lokasi?.PIC_BadgeNumber) &&
-                string.Equals(lokasi.PIC_BadgeNumber, myBadge, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            // Akses jika user terdaftar sebagai petugas di lokasi (berdasarkan BadgeNumber)
-            if (items?.Any() == true &&
-                items.Any(p => !string.IsNullOrWhiteSpace(p.BadgeNumber) &&
-                               p.BadgeNumber.Equals(myBadge, StringComparison.OrdinalIgnoreCase)))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
         private static double? ToDouble(decimal? v) => v.HasValue ? (double?)Convert.ToDouble(v.Value) : null;
         private static decimal? ToDecimal(double? v) => v.HasValue ? (decimal?)Convert.ToDecimal(v.Value) : null;
 
-        // ===== Helper: parse angka dengan InvariantCulture (titik sebagai desimal) =====
         private static double? ParseInvariant(string? s)
         {
             if (string.IsNullOrWhiteSpace(s)) return null;
-            s = s.Replace(',', '.'); // antisipasi user ketik koma
-            return double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)
-                ? d
-                : (double?)null;
+            s = s.Replace(',', '.');
+            return double.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var d) ? d : (double?)null;
         }
 
-        // ===========================
-        // LIST
-        // ===========================
+        // =========================== LIST ===========================
         [HttpGet]
         public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 20)
         {
             var all = await GetLokasiAsync() ?? new List<AparLokasi>();
 
-            // 🔐 Filter akses:
-            // AdminWeb & Rescue -> semua
-            // Lainnya -> hanya lokasi di mana user adalah PIC (berdasarkan klaim BadgeNumber)
             if (!IsAdmin() && !IsRescue())
             {
                 var myBadge = GetUserBadge();
@@ -109,7 +72,7 @@ namespace AparWebAdmin.Controllers
                 {
                     all = all
                         .Where(l => !string.IsNullOrWhiteSpace(l.PIC_BadgeNumber) &&
-                                    l.PIC_BadgeNumber.Equals(myBadge, StringComparison.OrdinalIgnoreCase))
+                                    string.Equals(l.PIC_BadgeNumber, myBadge, StringComparison.OrdinalIgnoreCase))
                         .ToList();
                 }
                 else
@@ -123,6 +86,7 @@ namespace AparWebAdmin.Controllers
                 var qq = q.Trim().ToLowerInvariant();
                 all = all.Where(l =>
                         (l.Nama ?? "").ToLower().Contains(qq) ||
+                        (l.DetailNamaLokasi ?? "").ToLower().Contains(qq) || // ✅ dukung filter
                         (l.PIC_Nama ?? "").ToLower().Contains(qq) ||
                         (l.PIC_BadgeNumber ?? "").ToLower().Contains(qq))
                     .ToList();
@@ -130,6 +94,7 @@ namespace AparWebAdmin.Controllers
 
             var total = all.Count;
             var items = all.OrderBy(l => l.Nama ?? string.Empty)
+                           .ThenBy(l => l.DetailNamaLokasi ?? string.Empty) // ✅ urutkan juga
                            .Skip(Math.Max(0, (page - 1) * pageSize))
                            .Take(pageSize)
                            .ToList();
@@ -144,9 +109,7 @@ namespace AparWebAdmin.Controllers
             return View(new AparLokasiListVM { items = items, page = page, pageSize = pageSize, total = total });
         }
 
-        // ===========================
-        // CREATE
-        // ===========================
+        // =========================== CREATE ===========================
         [HttpGet]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create()
@@ -166,7 +129,6 @@ namespace AparWebAdmin.Controllers
             if (string.IsNullOrWhiteSpace(vm.Nama))
                 ModelState.AddModelError(nameof(vm.Nama), "Nama lokasi wajib diisi.");
 
-            // ⬇️ PENTING: paksa parse invariant dari form agar tidak terjebak culture id-ID (koma)
             var latStr = Request?.Form["lat"].ToString();
             var lonStr = Request?.Form["Longitude"].ToString();
             var latParsed = ParseInvariant(latStr);
@@ -180,12 +142,12 @@ namespace AparWebAdmin.Controllers
                 return View(vm);
             }
 
-            // 🔐 Normalisasi koordinat (auto-swap + round 6 + clamp di VM)
             var (lat6, lon6) = vm.NormalizeLatLon();
 
             var payload = new AparLokasiFormRequest
             {
                 nama = vm.Nama?.Trim(),
+                detailNamaLokasi = vm.DetailNamaLokasi?.Trim(), // ✅ kirim field baru
                 lat = lat6,
                 @long = lon6,
                 picPetugasId = vm.PICPetugasId
@@ -199,7 +161,6 @@ namespace AparWebAdmin.Controllers
                 return View(vm);
             }
 
-            // Tambah PIC tambahan (optional)
             if (data?.Id is int lokasiId && lokasiId > 0 && vm.PICMultiIds?.Any() == true)
             {
                 var extras = vm.PICMultiIds
@@ -221,9 +182,28 @@ namespace AparWebAdmin.Controllers
             return RedirectToAction(nameof(Details), new { id = data?.Id ?? 0 });
         }
 
-        // ===========================
-        // DETAILS
-        // ===========================
+
+        // Link petugas existing ke lokasi; opsi jadikan PIC
+        private async Task<(bool ok, string? err)> AddPetugasToLokasiAsync(int lokasiId, int petugasId, bool asPIC)
+        {
+            try
+            {
+                var res = await _http.PostAsync(PathAddPetugas(lokasiId, petugasId, asPIC), content: null);
+                if (!res.IsSuccessStatusCode)
+                {
+                    return (false, await SafeReadErrorAsync(res));
+                }
+                return (true, null);
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "AddPetugasToLokasiAsync error (lokasiId={LokasiId}, petugasId={PetugasId}, asPIC={AsPIC})",
+                    lokasiId, petugasId, asPIC);
+                return (false, ex.Message);
+            }
+        }
+
+        // =========================== DETAILS ===========================
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -236,8 +216,14 @@ namespace AparWebAdmin.Controllers
 
             var (lokasi, items) = pack.Value;
 
-            // 🔐 Enforcement akses per-lokasi
-            if (!UserHasAccessToLokasi(lokasi, items))
+            var allowed = (IsAdmin() || IsRescue());
+            if (!allowed)
+            {
+                var myBadge = GetUserBadge();
+                allowed = !string.IsNullOrWhiteSpace(myBadge) &&
+                          string.Equals(lokasi.PIC_BadgeNumber ?? "", myBadge, StringComparison.OrdinalIgnoreCase);
+            }
+            if (!allowed)
             {
                 TempData["Error"] = "Anda tidak memiliki akses ke lokasi ini.";
                 return RedirectToAction(nameof(Index));
@@ -247,6 +233,7 @@ namespace AparWebAdmin.Controllers
             {
                 Id = lokasi.Id,
                 Nama = lokasi.Nama,
+                DetailNamaLokasi = lokasi.DetailNamaLokasi, // ✅
                 lat = ToDouble(lokasi.lat),
                 Longitude = ToDouble(lokasi.@long),
                 PICPetugasId = lokasi.PICPetugasId,
@@ -262,9 +249,7 @@ namespace AparWebAdmin.Controllers
             return View(vm);
         }
 
-        // ===========================
-        // EDIT
-        // ===========================
+        // =========================== EDIT ===========================
         [HttpGet]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id)
@@ -279,7 +264,6 @@ namespace AparWebAdmin.Controllers
             var (lokasi, items) = pack.Value;
             var meta = await GetLokasiFormMetaAsync();
 
-            // Gabungkan: petugas yang sudah di lokasi + kandidat tanpa lokasi
             var options = new List<AparPetugasOption>();
             options.AddRange(items.Select(x => new AparPetugasOption
             {
@@ -296,6 +280,7 @@ namespace AparWebAdmin.Controllers
             {
                 Id = lokasi.Id,
                 Nama = lokasi.Nama,
+                DetailNamaLokasi = lokasi.DetailNamaLokasi, // ✅
                 lat = ToDouble(lokasi.lat),
                 Longitude = ToDouble(lokasi.@long),
                 PICPetugasId = lokasi.PICPetugasId,
@@ -320,7 +305,6 @@ namespace AparWebAdmin.Controllers
             if (string.IsNullOrWhiteSpace(vm.Nama))
                 ModelState.AddModelError(nameof(vm.Nama), "Nama lokasi wajib diisi.");
 
-            // ⬇️ PENTING: parse invariant dari form setiap submit edit
             var latStr = Request?.Form["lat"].ToString();
             var lonStr = Request?.Form["Longitude"].ToString();
             var latParsed = ParseInvariant(latStr);
@@ -330,7 +314,6 @@ namespace AparWebAdmin.Controllers
 
             if (!ModelState.IsValid)
             {
-                // Repopulate agar form tetap terisi
                 var packInvalid = await GetLokasiWithPetugasAsync(id);
                 if (packInvalid is null) return NotFound();
                 var (lokasiInvalid, itemsInvalid) = packInvalid.Value;
@@ -360,12 +343,12 @@ namespace AparWebAdmin.Controllers
                 return View(vm);
             }
 
-            // 🔐 Normalisasi koordinat
             var (lat6, lon6) = vm.NormalizeLatLon();
 
             var payload = new AparLokasiFormRequest
             {
                 nama = vm.Nama?.Trim(),
+                detailNamaLokasi = vm.DetailNamaLokasi?.Trim(), // ✅ kirim field baru
                 lat = lat6,
                 @long = lon6,
                 picPetugasId = vm.PICPetugasId
@@ -382,9 +365,7 @@ namespace AparWebAdmin.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        // ===========================
-        // DELETE
-        // ===========================
+        // =========================== DELETE ===========================
         [HttpPost, ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Delete(int id)
@@ -399,82 +380,13 @@ namespace AparWebAdmin.Controllers
             return RedirectToAction(nameof(Details), new { id });
         }
 
-        // ===========================
-        // RELASI PETUGAS (single)
-        // ===========================
-        [HttpPost, ValidateAntiForgeryToken]
-        [Authorize(Roles = "AdminWeb")]
-        public async Task<IActionResult> AddPetugas(int lokasiId, int petugasId, bool asPIC = false)
-        {
-            var (ok, err) = await AddPetugasToLokasiAsync(lokasiId, petugasId, asPIC);
-            TempData[ok ? "Success" : "Error"] = ok ? "Petugas ditambahkan." : err ?? "Gagal menambah petugas.";
-            return RedirectToAction(nameof(Edit), new { id = lokasiId });
-        }
-
-        private async Task<(bool ok, string? err)> UnlinkPetugasFromLokasiAsync(int lokasiId, int petugasId)
-        {
-            try
-            {
-                var res = await _http.DeleteAsync(PathUnlinkPetugas(lokasiId, petugasId));
-                if (!res.IsSuccessStatusCode)
-                {
-                    return (false, await SafeReadErrorAsync(res));
-                }
-                return (true, null);
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "UnlinkPetugasFromLokasiAsync error");
-                return (false, ex.Message);
-            }
-        }
-
-        [HttpPost, ValidateAntiForgeryToken]
-        [Authorize(Roles = "AdminWeb")]
-        public async Task<IActionResult> UnlinkPetugas(int lokasiId, int petugasId)
-        {
-            var (ok, err) = await UnlinkPetugasFromLokasiAsync(lokasiId, petugasId);
-            TempData[ok ? "Success" : "Error"] = ok ? "Petugas di-unlink." : err ?? "Gagal unlink petugas.";
-            return RedirectToAction(nameof(Edit), new { id = lokasiId });
-        }
-
-        // ===========================
-        // RELASI PETUGAS (batch/multi) — untuk Edit page
-        // ===========================
-        [HttpPost, ValidateAntiForgeryToken]
-        [Authorize(Roles = "AdminWeb")]
-        public async Task<IActionResult> AddManyPIC(int lokasiId, List<int> petugasIds)
-        {
-            if (petugasIds?.Any() != true)
-                return RedirectToAction(nameof(Edit), new { id = lokasiId });
-
-            foreach (var pid in petugasIds.Distinct())
-            {
-                var (ok, err) = await AddPetugasToLokasiAsync(lokasiId, pid, asPIC: true);
-                if (!ok)
-                {
-                    TempData["Warning"] = (TempData["Warning"] as string ?? "") +
-                                          $"Gagal menambah sebagai PIC (PetugasId={pid}): {err}. ";
-                }
-            }
-            TempData["Success"] = "PIC tambahan berhasil diproses.";
-            return RedirectToAction(nameof(Edit), new { id = lokasiId });
-        }
-
-        // =====================================================================
-        // ======================= HELPER API CALLS =============================
-        // =====================================================================
-
+        // =========================== API Helpers ===========================
         private async Task<List<AparLokasi>?> GetLokasiAsync()
         {
             try
             {
                 var r = await _http.GetAsync(PathList());
-                if (!r.IsSuccessStatusCode)
-                {
-                    _log.LogWarning("GET {Path} failed: {Code}", PathList(), r.StatusCode);
-                    return new List<AparLokasi>();
-                }
+                if (!r.IsSuccessStatusCode) return new List<AparLokasi>();
 
                 var direct = await r.Content.ReadFromJsonAsync<List<AparLokasi>>();
                 if (direct != null) return direct;
@@ -495,10 +407,7 @@ namespace AparWebAdmin.Controllers
             {
                 var res = await _http.PostAsJsonAsync(PathCreate(), payload);
                 if (!res.IsSuccessStatusCode)
-                {
-                    var msg = await SafeReadErrorAsync(res);
-                    return (false, msg, null);
-                }
+                    return (false, await SafeReadErrorAsync(res), null);
 
                 var dto = await res.Content.ReadFromJsonAsync<AparLokasi>();
                 if (dto != null) return (true, null, dto);
@@ -524,9 +433,7 @@ namespace AparWebAdmin.Controllers
             {
                 var res = await _http.PutAsJsonAsync(PathById(id), payload);
                 if (!res.IsSuccessStatusCode)
-                {
                     return (false, await SafeReadErrorAsync(res));
-                }
                 return (true, null);
             }
             catch (Exception ex)
@@ -542,9 +449,7 @@ namespace AparWebAdmin.Controllers
             {
                 var res = await _http.DeleteAsync(PathById(id));
                 if (!res.IsSuccessStatusCode)
-                {
                     return (false, await SafeReadErrorAsync(res));
-                }
                 return (true, null);
             }
             catch (Exception ex)
@@ -554,43 +459,18 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // ------ Form Meta (untuk dropdown PIC) ------
         private async Task<LokasiFormMetaFallback?> GetLokasiFormMetaAsync()
         {
             try
             {
                 var res = await _http.GetAsync(PathFormMeta());
-                if (!res.IsSuccessStatusCode)
-                {
-                    _log.LogWarning("GET {Path} failed: {Code}", PathFormMeta(), res.StatusCode);
-                    return new LokasiFormMetaFallback();
-                }
-                return await res.Content.ReadFromJsonAsync<LokasiFormMetaFallback>()
-                       ?? new LokasiFormMetaFallback();
+                if (!res.IsSuccessStatusCode) return new LokasiFormMetaFallback();
+                return await res.Content.ReadFromJsonAsync<LokasiFormMetaFallback>() ?? new LokasiFormMetaFallback();
             }
             catch (Exception ex)
             {
                 _log.LogError(ex, "GetLokasiFormMetaAsync error");
                 return new LokasiFormMetaFallback();
-            }
-        }
-
-        // ------ Relasi Petugas ------
-        private async Task<(bool ok, string? err)> AddPetugasToLokasiAsync(int lokasiId, int petugasId, bool asPIC)
-        {
-            try
-            {
-                var res = await _http.PostAsync(PathAddPetugas(lokasiId, petugasId, asPIC), content: null);
-                if (!res.IsSuccessStatusCode)
-                {
-                    return (false, await SafeReadErrorAsync(res));
-                }
-                return (true, null);
-            }
-            catch (Exception ex)
-            {
-                _log.LogError(ex, "AddPetugasToLokasiAsync error");
-                return (false, ex.Message);
             }
         }
 
@@ -641,13 +521,11 @@ namespace AparWebAdmin.Controllers
                 JsonElement itemsEl = default;
                 bool hasLokasi = false, hasItems = false;
 
-                // { lokasi:{}, items:[] }
                 if (root.ValueKind == JsonValueKind.Object)
                 {
                     if (root.TryGetProperty("lokasi", out lokasiEl)) hasLokasi = true;
                     if (root.TryGetProperty("items", out itemsEl)) hasItems = true;
 
-                    // { data:{ ... } }
                     if (!hasLokasi && root.TryGetProperty("data", out var dataEl))
                     {
                         if (dataEl.ValueKind == JsonValueKind.Object)
@@ -660,7 +538,6 @@ namespace AparWebAdmin.Controllers
                     }
                 }
 
-                // objek lokasi langsung
                 if (!hasLokasi) { lokasiEl = root; hasLokasi = true; }
 
                 var lokasi = new AparLokasi();
@@ -668,6 +545,14 @@ namespace AparWebAdmin.Controllers
                 {
                     lokasi.Id = GetInt(lokasiEl, "Id", "id");
                     lokasi.Nama = GetString(lokasiEl, "Nama", "nama", "Name");
+
+                    // ✅ Ambil semua kemungkinan kunci:
+                    lokasi.DetailNamaLokasi = GetString(
+                        lokasiEl,
+                        "DetailNamaLokasi", "detailNamaLokasi",  // camelCase baru
+                        "detail_nama_lokasi",                    // snake_case DB
+                        "DetailNama"                              // fallback lama (jika ada)
+                    );
 
                     var lat = GetDouble(lokasiEl, "lat", "latitude", "Lat", "Latitude");
                     var lng = GetDouble(lokasiEl, "long", "lng", "longitude", "Lon", "Lng", "Longitude");
@@ -698,9 +583,8 @@ namespace AparWebAdmin.Controllers
 
                 return (lokasi, items);
             }
-            catch (Exception ex)
+            catch
             {
-                _log.LogWarning(ex, "ParseLokasiPayload gagal. Body: {Body}", body);
                 try
                 {
                     var lokasiFallback = JsonSerializer.Deserialize<AparLokasi>(body, options);
@@ -711,7 +595,7 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // --------- JSON helpers ----------
+        // JSON helpers
         private static string? GetString(JsonElement obj, params string[] keys)
         {
             foreach (var k in keys)
@@ -752,10 +636,7 @@ namespace AparWebAdmin.Controllers
                 {
                     if (el.ValueKind == JsonValueKind.Number && el.TryGetDouble(out var d)) return d;
                     if (el.ValueKind == JsonValueKind.String &&
-                        double.TryParse(el.GetString(),
-                            NumberStyles.Any,
-                            CultureInfo.InvariantCulture,
-                            out var ds)) return ds;
+                        double.TryParse(el.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var ds)) return ds;
                 }
             }
             return null;
@@ -765,8 +646,8 @@ namespace AparWebAdmin.Controllers
         {
             try
             {
-                var json = await res.Content.ReadFromJsonAsync<JsonElement>();
-                if (json.ValueKind == JsonValueKind.Object)
+                var json = await res.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                if (json.ValueKind == System.Text.Json.JsonValueKind.Object)
                 {
                     if (json.TryGetProperty("message", out var msg)) return msg.GetString();
                     if (json.TryGetProperty("error", out var err)) return err.GetString();
@@ -779,7 +660,6 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // ====================== FALLBACK DTO ======================
         private class PetugasListItemFallback
         {
             public int Id { get; set; }
