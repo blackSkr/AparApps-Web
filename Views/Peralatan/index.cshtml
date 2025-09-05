@@ -313,10 +313,10 @@
                                 class="fas fa-edit"></i></a>
                             <a class="btn btn-sm btn-info" asp-action="QR" asp-route-id="@x.Id" title="QR"><i
                                 class="fas fa-qrcode"></i></a>
-                            <button type="button" class="btn btn-sm btn-danger"
+                            @* <button type="button" class="btn btn-sm btn-danger"
                               onclick="openDanger(@x.Id, '@(x.Kode ?? x.LokasiNama)')" title="Mark as Exp">
                               <i class="fas fa-exclamation-triangle"></i>
-                            </button>
+                            </button> *@
                           </div>
                           <div class="dropdown action-dropdown">
                             <button class="btn btn-sm btn-light border dropdown-toggle"
