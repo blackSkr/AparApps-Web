@@ -11,6 +11,7 @@
     }
 }
 <partial name="~/Views/Shared/_Alerts.cshtml" />
+
 <div class="d-flex align-items-center justify-content-between mb-3">
     <h2>Peralatan @p.Kode</h2>
     <div class="d-flex gap-2">
@@ -28,10 +29,22 @@
                     <dd class="col-sm-8">@p.Kode</dd>
                     <dt class="col-sm-4">Lokasi</dt>
                     <dd class="col-sm-8">@p.LokasiNama</dd>
+<dt class="col-sm-4">Detail Lokasi</dt>                 @* ✅ baru *@
+<dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(p.DetailNamaLokasi) ? p.DetailNamaLokasi : "-")</dd>
+
                     <dt class="col-sm-4">Jenis</dt>
                     <dd class="col-sm-8">@p.JenisNama</dd>
                     <dt class="col-sm-4">Spesifikasi</dt>
                     <dd class="col-sm-8">@p.Spesifikasi</dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(p.Status) ? p.Status : "-")</dd>
+                    <dt class="col-sm-4">Tanggal Update</dt>
+                    <dd class="col-sm-8">@((p.Tanggal_Update_Alat?.ToString("yyyy-MM-dd HH:mm")) ?? "-")</dd>
+                    <dt class="col-sm-4">Keterangan</dt>
+                    <dd class="col-sm-8">@(!string.IsNullOrWhiteSpace(p.Keterangan) ? p.Keterangan : "-")</dd>
+                    <dt class="col-sm-4">Exp. Date</dt>
+                    <dd class="col-sm-8">@((p.Exp_Date?.ToString("yyyy-MM-dd")) ?? "-")</dd>
                 </dl>
             </div>
         </div>
@@ -58,54 +71,3 @@
     </div>
 </div>
 
-<div class="card mt-3">
-    <div class="card-body">
-        <h5 class="card-title">Riwayat Pemeriksaan</h5>
-        @if (!(Model.Riwayat?.Any() ?? false))
-        {
-            <div class="text-muted">Belum ada riwayat.</div>
-        }
-        else
-        {
-            // helper kecil buat ambil property by name (compatible dengan berbagai DTO)
-            object? GetProp(object obj, params string[] names)
-            {
-                var t = obj.GetType();
-                foreach (var n in names)
-                {
-                    var pi = t.GetProperty(n);
-                    if (pi != null) return pi.GetValue(obj);
-                }
-                return null;
-            }
-
-            <div class="table-responsive">
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>Tanggal</th>
-                            <th>Petugas</th>
-                            <th>Keterangan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var r in Model.Riwayat)
-                        {
-                            var tglObj = GetProp(r, "Tanggal", "TanggalPemeriksaan", "Date");
-                            DateTime? tgl = tglObj is DateTime dt ? dt : (DateTime?)null;
-                            var petugas = (GetProp(r, "BadgeNumber", "PetugasBadge", "Petugas") ?? "")?.ToString();
-                            var ket = (GetProp(r, "Keterangan", "Catatan", "Notes", "Deskripsi") ?? "")?.ToString();
-
-                            <tr>
-                                <td>@(tgl?.ToString("yyyy-MM-dd") ?? "-")</td>
-                                <td>@(string.IsNullOrWhiteSpace(petugas) ? "-" : petugas)</td>
-                                <td>@(string.IsNullOrWhiteSpace(ket) ? "-" : ket)</td>
-                            </tr>
-                        }
-
-                    </tbody>
-                </table>
-            </div>
-        }
-    </div>
-</div>

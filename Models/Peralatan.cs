@@ -11,11 +11,17 @@ namespace AparAppsWebsite.Models
         public int LokasiId { get; set; }
         public string? LokasiNama { get; set; }
 
+        public string? DetailNamaLokasi { get; set; }  // ✅ baru
+
         public string? Spesifikasi { get; set; }
         public string? TokenQR { get; set; }
 
-        // Tambahan agar Views tidak error
-        public string? FotoPath { get; set; }                 // format "a;b;c" dari API Node
-        public List<string>? FotoUrls { get; set; }           // quality-of-life dari /admin endpoint
+        public string? Status { get; set; }
+        public DateTime? Tanggal_Update_Alat { get; set; }
+        public string? Keterangan { get; set; }
+        public DateTime? Exp_Date { get; set; }
+
+        public string? FotoPath { get; set; }
+        public List<string>? FotoUrls { get; set; }
     }
 }

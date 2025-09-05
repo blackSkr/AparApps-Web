@@ -3,20 +3,13 @@
   ViewData["Title"] = "Edit Peralatan";
   var apiBase = (string?)ViewBag.ApiBase ?? "";
   var fotos = Model.FotoUrls ?? new List<string>();
-
   if (!fotos.Any() && !string.IsNullOrWhiteSpace(Model.FotoPath))
   {
-    var parts = (Model.FotoPath ?? "")
-    .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    fotos = parts
-    .Select(p => p.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? p : $"{apiBase}{p}")
-    .ToList();
+    var parts = (Model.FotoPath ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    fotos = parts.Select(p => p.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? p : $"{apiBase}{p}").ToList();
   }
 }
-
 <partial name="~/Views/Shared/_Alerts.cshtml" />
-
 <h2 class="mb-3">Edit Peralatan - @Model.Kode</h2>
 
 <form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="mb-4">
@@ -38,9 +31,41 @@
   </div>
 </form>
 
+<!-- DANGER ZONE -->
+<div class="card border-danger mt-4">
+  <div class="card-header bg-danger text-white"><strong>Danger Zone</strong></div>
+  <div class="card-body">
+    <p class="mb-3">Tindakan ini <strong>tidak menghapus</strong> data, tetapi menandai peralatan sebagai
+      <span class="badge bg-dark">Exp</span>. Tanggal update akan otomatis diisi dari server.
+    </p>
+
+    <form asp-action="MarkExpired" method="post" class="row g-2" onsubmit="return confirm('Tandai sebagai Exp?');">
+      @Html.AntiForgeryToken()
+      <input type="hidden" name="id" value="@Model.Id" />
+
+      <div class="col-md-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" disabled>
+          <option selected>Exp</option>
+        </select>
+        <div class="form-text">Status yang akan diset.</div>
+      </div>
+
+      <div class="col-md-9">
+        <label class="form-label">Keterangan <span class="text-danger">*</span></label>
+        <input name="reason" class="form-control" placeholder="Wajib diisi (alasan ditandai Exp)" required />
+      </div>
+
+      <div class="col-12 mt-2">
+        <button class="btn btn-danger"><i class="fas fa-exclamation-triangle me-1"></i> Mark as Expired</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 @if (fotos.Any())
 {
-  <h5>Foto Saat Ini</h5>
+  <h5 class="mt-4">Foto Saat Ini</h5>
   <div class="row row-cols-2 row-cols-md-4 g-3">
     @foreach (var url in fotos)
     {
@@ -60,7 +85,6 @@
     }
   </div>
 }
-
 @section Scripts {
   <partial name="_ValidationScriptsPartial" />
 }

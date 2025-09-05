@@ -1,378 +1,423 @@
 @model List<AparAppsWebsite.Models.Peralatan>
 @using System
-
 @{
-    ViewData["Title"] = "Peralatan";
+  ViewData["Title"] = "Peralatan";
+  var apiBase = (string?)ViewBag.ApiBase ?? "";
+  var jenisFilter = ViewBag.FilterJenis as List<AparAppsWebsite.Models.DropdownItem> ?? new();
+  var lokasiFilter = ViewBag.FilterLokasi as List<AparAppsWebsite.Models.DropdownItem> ?? new();
+  string q = ViewBag.Query as string ?? "";
+  string jenisIdQ = ViewBag.JenisId != null ? ViewBag.JenisId.ToString() : "";
+  string lokasiIdQ = ViewBag.LokasiId != null ? ViewBag.LokasiId.ToString() : "";
+  string sortBy = ViewBag.SortBy as string ?? "Kode";
+  string sortDir = ViewBag.SortDir as string ?? "ASC";
+  int curPage = ViewBag.Page ?? 1;
+  int pageSize = ViewBag.PageSize ?? 10;
+  int total = (ViewBag.Total as int?) ?? (Model?.Count ?? 0);
+  int totalPages = (int)Math.Ceiling(total / Math.Max(1.0, pageSize));
+  int safeCur = Math.Max(1, Math.Min(Math.Max(1, totalPages), curPage));
+  int startIdx = total == 0 ? 0 : (safeCur - 1) * pageSize + 1;
+  int endIdx = Math.Min(safeCur * pageSize, total);
+  int left = Math.Max(1, safeCur - 2);
+  int right = Math.Min(totalPages, safeCur + 2);
+  Func<string, string> ToggleDir = col =>
+  (string.Equals(sortBy, col, StringComparison.OrdinalIgnoreCase) && sortDir.Equals("ASC",
+  StringComparison.OrdinalIgnoreCase))
+  ? "DESC" : "ASC";
+  bool sKodeAct = sortBy.Equals("Kode", StringComparison.OrdinalIgnoreCase);
+  bool sLokAct = sortBy.Equals("Lokasi", StringComparison.OrdinalIgnoreCase);
+  bool sJenAct = sortBy.Equals("Jenis", StringComparison.OrdinalIgnoreCase);
+  string caret = sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase) ? "↑" : "↓";
+  object commonRoute(int page) => new { q, jenisId = jenisIdQ, lokasiId = lokasiIdQ, page, pageSize, sortBy, sortDir };
 
-    // --- Data dari Controller (ViewBag) ---
-    var apiBase      = (string?)ViewBag.ApiBase ?? "";
-    var jenisFilter  = ViewBag.FilterJenis  as List<AparAppsWebsite.Models.DropdownItem> ?? new();
-    var lokasiFilter = ViewBag.FilterLokasi as List<AparAppsWebsite.Models.DropdownItem> ?? new();
-
-    string q         = ViewBag.Query   as string ?? "";
-    string jenisIdQ  = ViewBag.JenisId != null  ? ViewBag.JenisId.ToString()  : "";
-    string lokasiIdQ = ViewBag.LokasiId!= null  ? ViewBag.LokasiId.ToString() : "";
-
-    // --- Sorting (gaya Employee) ---
-    string sortBy    = ViewBag.SortBy as string ?? "Kode";   // Kode|Lokasi|Jenis
-    string sortDir   = ViewBag.SortDir as string ?? "ASC";   // ASC|DESC
-
-    int curPage      = ViewBag.Page     ?? 1;
-    int pageSize     = ViewBag.PageSize ?? 10;
-
-    // --- TOTAL: dipegang Controller; fallback ke Model.Count ---
-    int total        = (ViewBag.Total as int?) ?? (Model?.Count ?? 0);
-
-    // --- Paging helper ---
-    int totalPages = (int)Math.Ceiling(total / Math.Max(1.0, pageSize));
-    int safeCur    = Math.Max(1, Math.Min(Math.Max(1, totalPages), curPage));
-    int startIdx   = total == 0 ? 0 : (safeCur - 1) * pageSize + 1;
-    int endIdx     = Math.Min(safeCur * pageSize, total);
-    int left       = Math.Max(1, safeCur - 2);
-    int right      = Math.Min(totalPages, safeCur + 2);
-
-    // --- Toggle dir helper & flags (untuk caret) ---
-    Func<string, string> ToggleDir = (col) =>
-        (string.Equals(sortBy, col, StringComparison.OrdinalIgnoreCase) && sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase))
-        ? "DESC" : "ASC";
-
-    bool sKodeAct   = sortBy.Equals("Kode",   StringComparison.OrdinalIgnoreCase);
-    bool sLokAct    = sortBy.Equals("Lokasi", StringComparison.OrdinalIgnoreCase);
-    bool sJenAct    = sortBy.Equals("Jenis",  StringComparison.OrdinalIgnoreCase);
-    string caret    = sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase) ? "↑" : "↓";
-
-    object commonRoute(int page) => new {
-        q,
-        jenisId  = jenisIdQ,
-        lokasiId = lokasiIdQ,
-        page,
-        pageSize,
-        sortBy,
-        sortDir
-    };
-
-    // --- Sorting URLs (reset ke page 1) ---
-    string sKodeUrl = Url.Action("Index", new { q, jenisId = jenisIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Kode",   sortDir = ToggleDir("Kode")   }) ?? "#";
-    string sLokUrl  = Url.Action("Index", new { q, jenisId = jenisIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Lokasi", sortDir = ToggleDir("Lokasi") }) ?? "#";
-    string sJenUrl  = Url.Action("Index", new { q, jenisId = jenisIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Jenis",  sortDir = ToggleDir("Jenis")  }) ?? "#";
-
-    // --- Prev/Next URL ---
-    string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "#";
-    string nextUrl = Url.Action("Index", commonRoute(Math.Min(Math.Max(1, totalPages), safeCur + 1))) ?? "#";
-
-    // Helper URL nomor halaman
-    Func<int, string> pg = (int p) => Url.Action("Index", commonRoute(p)) ?? "#";
+  string sKodeUrl = Url.Action("Index", new
+  {
+    q,
+    jenisId = jenisIdQ,
+    lokasiId = lokasiIdQ,
+    page = 1,
+    pageSize,
+    sortBy =
+  "Kode",
+    sortDir = ToggleDir("Kode")
+  }) ?? "#";
+  string sLokUrl = Url.Action("Index", new
+  {
+    q,
+    jenisId = jenisIdQ,
+    lokasiId = lokasiIdQ,
+    page = 1,
+    pageSize,
+    sortBy =
+  "Lokasi",
+    sortDir = ToggleDir("Lokasi")
+  }) ?? "#";
+  string sJenUrl = Url.Action("Index", new
+  {
+    q,
+    jenisId = jenisIdQ,
+    lokasiId = lokasiIdQ,
+    page = 1,
+    pageSize,
+    sortBy =
+  "Jenis",
+    sortDir = ToggleDir("Jenis")
+  }) ?? "#";
+  string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "#";
+  string nextUrl = Url.Action("Index", commonRoute(Math.Min(Math.Max(1, totalPages), safeCur + 1))) ?? "#";
+  Func<int, string> pg = (int p) => Url.Action("Index", commonRoute(p)) ?? "#";
 }
 
 <style>
-    .toolbar .form-control, .toolbar .form-select { min-width: 180px; }
-    .toolbar .btn { border-radius: .45rem; }
-    .k-chip { font-size: .8rem; border: 1px solid rgba(0,0,0,.06); background: var(--bs-light); }
-    .sticky-head th { position: sticky; top: 0; z-index: 2; background: var(--bs-body-bg); }
-    .table thead th { white-space: nowrap; }
-    .table-hover tbody tr:hover { filter: brightness(.98); }
+  .toolbar .form-control,
+  .toolbar .form-select {
+    min-width: 180px;
+  }
 
-    .table thead th a {
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: .35rem;
+  .toolbar .btn {
+    border-radius: .45rem;
+  }
+
+  .k-chip {
+    font-size: .8rem;
+    border: 1px solid rgba(0, 0, 0, .06);
+    background: var(--bs-light);
+  }
+
+  .sticky-head th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bs-body-bg);
+  }
+
+  .table thead th {
+    white-space: nowrap;
+  }
+
+  .table-hover tbody tr:hover {
+    filter: brightness(.98);
+  }
+
+  .table thead th a {
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+  }
+
+  .sort-caret {
+    opacity: .55;
+  }
+
+  .sort-active .sort-caret {
+    opacity: 1;
+  }
+
+  .thumb {
+    height: 50px;
+    width: 50px;
+    object-fit: cover;
+    border-radius: .35rem;
+    border: 1px solid rgba(0, 0, 0, .08);
+  }
+
+  .kode-badge {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  }
+
+  .action-inline {
+    display: none;
+  }
+
+  .action-dropdown {
+    display: inline-block;
+  }
+
+  @@media (min-width: 768px) {
+    .action-inline {
+      display: inline-flex;
     }
-    .sort-caret { opacity: .55; }
-    .sort-active .sort-caret { opacity: 1; }
 
-    .thumb { height: 50px; width: 50px; object-fit: cover; border-radius: .35rem; border: 1px solid rgba(0,0,0,.08); }
-    .kode-badge { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-
-    /* Aksi: inline di desktop, dropdown di mobile */
-    .action-inline { display: none; }
-    .action-dropdown { display: inline-block; }
-    @@media (min-width: 768px) {
-        .action-inline { display: inline-flex; }
-        .action-dropdown { display: none; }
+    .action-dropdown {
+      display: none;
     }
+  }
 </style>
 
 <div class="container-fluid">
-    <div class="row g-3">
-        <div class="col-12">
+  <div class="row g-3">
+    <div class="col-12">
+      <partial name="~/Views/Shared/_Alerts.cshtml" />
+      @if (ViewBag.Error != null)
+      {
+        <div class="alert alert-danger d-flex align-items-center gap-2">
+          <i class="fas fa-exclamation-triangle"></i><span>@ViewBag.Error</span>
+        </div>
+      }
 
-            <partial name="~/Views/Shared/_Alerts.cshtml" />
-            @if (ViewBag.Error != null)
+      <div class="card border-0 shadow-sm">
+        <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+          <div>
+            <h3 class="card-title mb-0">Peralatan</h3>
+            <div class="small text-muted">Pencarian, filter, sortir, dan pagination di server. Menampilkan <b>hanya yang
+                belum Exp</b>.</div>
+          </div>
+
+          <form method="get" class="d-flex flex-wrap align-items-end gap-2">
+            <input type="hidden" name="sortBy" value="@sortBy" />
+            <input type="hidden" name="sortDir" value="@sortDir" />
+            <input type="hidden" name="page" value="1" />
+
+            <div>
+              <label class="form-label small text-muted">Pencarian</label>
+              <input class="form-control" name="q" value="@q"
+                placeholder="Cari kode / lokasi / jenis / ket / spesifikasi" />
+            </div>
+
+            <div>
+              <label class="form-label small text-muted">Filter Jenis</label>
+              <select class="form-select" name="jenisId">
+                <option value="">— Semua Jenis —</option>
+                @foreach (var j in jenisFilter)
+                {
+                  <option value="@j.Id" selected="@(jenisIdQ == j.Id.ToString() ? "selected" : null)">@j.Nama</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label small text-muted">Filter Lokasi</label>
+              <select class="form-select" name="lokasiId">
+                <option value="">— Semua Lokasi —</option>
+                @foreach (var l in lokasiFilter)
+                {
+                  <option value="@l.Id" selected="@(lokasiIdQ == l.Id.ToString() ? "selected" : null)">@l.Nama</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="form-label small text-muted">Per halaman</label>
+              <select class="form-select" name="pageSize" onchange="this.form.submit()">
+                <option value="10" selected="@(pageSize == 10 ? "selected" : null)">10</option>
+                <option value="20" selected="@(pageSize == 20 ? "selected" : null)">20</option>
+                <option value="50" selected="@(pageSize == 50 ? "selected" : null)">50</option>
+                <option value="100" selected="@(pageSize == 100 ? "selected" : null)">100</option>
+              </select>
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary" type="submit">
+                <i class="fas fa-search"></i> Terapkan
+              </button>
+              <a class="btn btn-light border" href="@Url.Action("Index")">
+                <i class="fas fa-undo"></i> Reset
+              </a>
+            </div>
+          </form>
+          <div class="d-flex gap-2">
+            <a class="btn btn-warning" asp-controller="Peralatan" asp-action="Expired">
+              <i class="bi bi-fire me-2"></i> Peralatan Expired
+            </a>
+            <a class="btn btn-success" asp-action="Create">
+              <i class="fas fa-plus"></i> Tambah Peralatan
+            </a>
+
+          </div>
+
+          <div class="card-body">
+            @if (Model is { Count: > 0 })
             {
-                <div class="alert alert-danger d-flex align-items-center gap-2">
-                    <i class="fas fa-exclamation-triangle"></i><span>@ViewBag.Error</span>
-                </div>
+              <div class="mb-2 small text-muted">
+                Menampilkan <b>@startIdx-@endIdx</b> dari <b>@total</b> data.
+                @if (!string.IsNullOrWhiteSpace(q))
+                {
+                  <span class="ms-2 k-chip px-2 py-1 rounded">Query: <b>@q</b></span>
+                }
+                @if (!string.IsNullOrWhiteSpace(jenisIdQ))
+                {
+                  <span class="ms-2 k-chip px-2 py-1 rounded">Jenis:
+                    <b>@jenisFilter.FirstOrDefault(x => x.Id.ToString() == jenisIdQ)?.Nama ?? jenisIdQ</b></span>
+                }
+                @if (!string.IsNullOrWhiteSpace(lokasiIdQ))
+                {
+                  <span class="ms-2 k-chip px-2 py-1 rounded">Lokasi:
+                    <b>@lokasiFilter.FirstOrDefault(x => x.Id.ToString() == lokasiIdQ)?.Nama ?? lokasiIdQ</b></span>
+                }
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light sticky-head">
+                    <tr>
+                      <th><a class="@(sKodeAct ? "sort-active" : "")" href="@sKodeUrl">Kode <span
+                            class="sort-caret">@(sKodeAct? caret : "↕")</span></a></th>
+                      <th><a class="@(sLokAct ? "sort-active" : "")" href="@sLokUrl">Lokasi <span
+                            class="sort-caret">@(sLokAct? caret : "↕")</span></a></th>
+                      <th><a class="@(sJenAct ? "sort-active" : "")" href="@sJenUrl">Jenis <span
+                            class="sort-caret">@(sJenAct? caret : "↕")</span></a></th>
+                      <th>Status</th>
+                      <th>Exp. Date</th>
+                      <th>Spesifikasi</th>
+                      <th>Keterangan</th>
+                      <th>Foto</th>
+                      <th class="text-end" style="width:170px;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @foreach (var x in Model)
+                    {
+                      var foto = (x.FotoUrls ?? new List<string>()).FirstOrDefault();
+                      if (string.IsNullOrWhiteSpace(foto) && !string.IsNullOrWhiteSpace(x.FotoPath))
+                      {
+                        var parts = (x.FotoPath ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries);
+                        var rel = parts.FirstOrDefault();
+                        if (!string.IsNullOrWhiteSpace(rel))
+                          foto = (rel.StartsWith("http", StringComparison.OrdinalIgnoreCase)) ? rel : $"{apiBase}{rel}";
+                      }
+                      <tr>
+                        <td><span class="badge bg-secondary kode-badge">@x.Kode</span></td>
+                        <td>@(string.IsNullOrWhiteSpace(x.LokasiNama) ? "-" : x.LokasiNama)</td>
+                        <td>
+                          @if (string.IsNullOrWhiteSpace(x.LokasiNama))
+                          {
+                            @("-")
+                          }
+                          else
+                          {
+                            <div>@x.LokasiNama</div>
+                            @if (!string.IsNullOrWhiteSpace(x.DetailNamaLokasi))
+                            {
+                              <div class="text-muted small">@x.DetailNamaLokasi</div>
+                            }
+                          }
+                        </td>
+
+                        <td>@(string.IsNullOrWhiteSpace(x.JenisNama) ? "-" : x.JenisNama)</td>
+                        <td>@(string.IsNullOrWhiteSpace(x.Status) ? "-" : x.Status)</td>
+                        <td>@(x.Exp_Date.HasValue? x.Exp_Date.Value.ToString("yyyy-MM-dd") : "-")</td>
+                        <td class="small text-muted">@(!string.IsNullOrWhiteSpace(x.Spesifikasi) ? x.Spesifikasi : "-")</td>
+                        <td class="small">@(!string.IsNullOrWhiteSpace(x.Keterangan) ? x.Keterangan : "-")</td>
+                        <td>
+                          @if (!string.IsNullOrWhiteSpace(foto))
+                          {
+                            <img src="@foto" alt="Foto @x.Kode" class="thumb" />
+                          }
+                        </td>
+                        <td class="text-end">
+                          <div class="btn-group action-inline">
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@x.Id"
+                              title="Detail"><i class="fas fa-eye"></i></a>
+                            <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@x.Id" title="Edit"><i
+                                class="fas fa-edit"></i></a>
+                            <a class="btn btn-sm btn-info" asp-action="QR" asp-route-id="@x.Id" title="QR"><i
+                                class="fas fa-qrcode"></i></a>
+                            <button type="button" class="btn btn-sm btn-danger"
+                              onclick="openDanger(@x.Id, '@(x.Kode ?? x.LokasiNama)')" title="Mark as Exp">
+                              <i class="fas fa-exclamation-triangle"></i>
+                            </button>
+                          </div>
+                          <div class="dropdown action-dropdown">
+                            <button class="btn btn-sm btn-light border dropdown-toggle"
+                              data-bs-toggle="dropdown">Aksi</button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                              <li><a class="dropdown-item" asp-action="Details" asp-route-id="@x.Id"><i
+                                    class="fas fa-eye me-2"></i>Detail</a></li>
+                              <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@x.Id"><i
+                                    class="fas fa-edit me-2"></i>Edit</a></li>
+                              <li><a class="dropdown-item" asp-action="QR" asp-route-id="@x.Id"><i
+                                    class="fas fa-qrcode me-2"></i>QR</a></li>
+                              <li>
+                                <hr class="dropdown-divider" />
+                              </li>
+                              <li><button type="button" class="dropdown-item text-danger"
+                                  onclick="confirmDelete(@x.Id, '@(x.Kode ?? x.LokasiNama)')"><i
+                                    class="fas fa-trash me-2"></i>Hapus (Mark Exp)</button></li>
+                            </ul>
+                          </div>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- pager -->
+              <div class="d-flex justify-content-between align-items-center mt-3">
+                <div class="small text-muted">Menampilkan <b>@startIdx</b>–<b>@endIdx</b> dari <b>@total</b>.</div>
+                <nav>
+                  <ul class="pagination mb-0">
+                    <li class="page-item @(safeCur == 1 ? "disabled" : "")"><a class="page-link" href="@prevUrl">‹</a>
+                    </li>
+                    @for (int p = left; p <= right; p++)
+                    {
+                      <li class="page-item @(p == safeCur ? "active" : "")"><a class="page-link" href="@pg(p)">@p</a></li>
+                    }
+                    <li class="page-item @(safeCur == totalPages ? "disabled" : "")"><a class="page-link"
+                        href="@nextUrl">›</a></li>
+                  </ul>
+                </nav>
+              </div>
             }
-
-            <div class="card border-0 shadow-sm">
-                <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <div>
-                        <h3 class="card-title mb-0">Peralatan</h3>
-                        <div class="small text-muted">Pencarian, filter, sortir, dan pagination di server.</div>
-                    </div>
-
-                    <div class="toolbar d-flex flex-wrap align-items-end gap-2">
-                        <form method="get" class="d-flex flex-wrap align-items-end gap-2">
-                            <input type="hidden" name="sortBy" value="@sortBy" />
-                            <input type="hidden" name="sortDir" value="@sortDir" />
-                            <input type="hidden" name="page"    value="1" />
-
-                            <div>
-                                <label class="form-label small text-muted">Pencarian</label>
-                                <input class="form-control" name="q" value="@q" placeholder="Cari kode / lokasi / jenis" />
-                            </div>
-
-                            <div>
-                                <label class="form-label small text-muted">Filter Jenis</label>
-                                <select class="form-select" name="jenisId">
-                                    <option value="">— Semua Jenis —</option>
-                                    @foreach (var j in jenisFilter)
-                                    {
-                                        if (jenisIdQ == j.Id.ToString())
-                                        { <option value="@j.Id" selected>@j.Nama</option> }
-                                        else
-                                        { <option value="@j.Id">@j.Nama</option> }
-                                    }
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="form-label small text-muted">Filter Lokasi</label>
-                                <select class="form-select" name="lokasiId">
-                                    <option value="">— Semua Lokasi —</option>
-                                    @foreach (var l in lokasiFilter)
-                                    {
-                                        if (lokasiIdQ == l.Id.ToString())
-                                        { <option value="@l.Id" selected>@l.Nama</option> }
-                                        else
-                                        { <option value="@l.Id">@l.Nama</option> }
-                                    }
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="form-label small text-muted">Per halaman</label>
-                                <select class="form-select" name="pageSize" onchange="this.form.submit()">
-                                    @if (pageSize == 10)   { <option value="10" selected>10</option> }   else { <option value="10">10</option> }
-                                    @if (pageSize == 20)   { <option value="20" selected>20</option> }   else { <option value="20">20</option> }
-                                    @if (pageSize == 50)   { <option value="50" selected>50</option> }   else { <option value="50">50</option> }
-                                    @if (pageSize == 100)  { <option value="100" selected>100</option> } else { <option value="100">100</option> }
-                                </select>
-                            </div>
-
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-outline-secondary" type="submit">
-                                    <i class="fas fa-search"></i> Terapkan
-                                </button>
-                                <a class="btn btn-light border" href="@Url.Action("Index")">
-                                    <i class="fas fa-undo"></i> Reset
-                                </a>
-                            </div>
-                        </form>
-
-                        <a class="btn btn-primary" asp-action="Create">
-                            <i class="fas fa-plus"></i> Tambah Peralatan
-                        </a>
-                    </div>
+            else
+            {
+              <div class="alert alert-info d-flex align-items-start gap-2">
+                <i class="fas fa-info-circle mt-1"></i>
+                <div>
+                  <div class="fw-semibold">Data tidak ditemukan.</div>
+                  <div class="small">Coba ubah kata kunci, filter, atau ukuran halaman.</div>
                 </div>
-
-                <div class="card-body">
-                    @if (Model is { Count: > 0 })
-                    {
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                            <div class="small text-muted">
-                                Menampilkan <strong>@startIdx</strong>-<strong>@endIdx</strong> dari <strong>@total</strong> data.
-                                @if (!string.IsNullOrWhiteSpace(q))
-                                { <span class="badge k-chip ms-1"><i class="fas fa-search"></i> “@q”</span> }
-                                @if (!string.IsNullOrWhiteSpace(jenisIdQ))
-                                {
-                                    var jn = jenisFilter.FirstOrDefault(x => x.Id.ToString() == jenisIdQ)?.Nama ?? "Tidak diketahui";
-                                    <span class="badge k-chip ms-1"><i class="fas fa-filter"></i> Jenis: @jn</span>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(lokasiIdQ))
-                                {
-                                    var ln = lokasiFilter.FirstOrDefault(x => x.Id.ToString() == lokasiIdQ)?.Nama ?? "Tidak diketahui";
-                                    <span class="badge k-chip ms-1"><i class="fas fa-map-marker-alt"></i> Lokasi: @ln</span>
-                                }
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light sticky-head">
-                                    <tr>
-                                        <th>
-                                            <a class="@(sKodeAct ? "sort-active" : "")" href="@sKodeUrl">
-                                                Kode <span class="sort-caret">@(sKodeAct? caret : "↕")</span>
-                                            </a>
-                                        </th>
-                                        <th>
-                                            <a class="@(sLokAct ? "sort-active" : "")" href="@sLokUrl">
-                                                Lokasi <span class="sort-caret">@(sLokAct? caret : "↕")</span>
-                                            </a>
-                                        </th>
-                                        <th>
-                                            <a class="@(sJenAct ? "sort-active" : "")" href="@sJenUrl">
-                                                Jenis <span class="sort-caret">@(sJenAct? caret : "↕")</span>
-                                            </a>
-                                        </th>
-                                        <th>Spesifikasi</th>
-                                        <th>Foto</th>
-                                        <th class="text-end" style="width:170px;">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                @foreach (var x in Model)
-                                {
-                                    var foto = (x.FotoUrls ?? new List<string>()).FirstOrDefault();
-                                    if (string.IsNullOrWhiteSpace(foto) && !string.IsNullOrWhiteSpace(x.FotoPath))
-                                    {
-                                        var parts = (x.FotoPath ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                                        var rel = parts.FirstOrDefault();
-                                        if (!string.IsNullOrWhiteSpace(rel))
-                                            foto = (rel!.StartsWith("http", StringComparison.OrdinalIgnoreCase)) ? rel : $"{apiBase}{rel}";
-                                    }
-                                    <tr>
-                                        <td><span class="badge bg-secondary kode-badge">@x.Kode</span></td>
-                                        <td>@(string.IsNullOrWhiteSpace(x.LokasiNama) ? "-" : x.LokasiNama)</td>
-                                        <td>@(string.IsNullOrWhiteSpace(x.JenisNama) ? "-" : x.JenisNama)</td>
-                                        <td class="small text-muted">@x.Spesifikasi</td>
-                                        <td>
-                                            @if (!string.IsNullOrWhiteSpace(foto))
-                                            { <img src="@foto" alt="Foto @x.Kode" class="thumb" /> }
-                                        </td>
-                                        <td class="text-end">
-                                            <!-- Desktop -->
-                                            <div class="btn-group action-inline">
-                                                <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@x.Id" title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@x.Id" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <a class="btn btn-sm btn-info" asp-action="QR" asp-route-id="@x.Id" title="QR">
-                                                    <i class="fas fa-qrcode"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@x.Id, '@(x.Kode ?? x.LokasiNama)')" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                            <!-- Mobile -->
-                                            <div class="dropdown action-dropdown">
-                                                <button class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    Aksi
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li><a class="dropdown-item" asp-action="Details" asp-route-id="@x.Id"><i class="fas fa-eye me-2"></i>Detail</a></li>
-                                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@x.Id"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                                                    <li><a class="dropdown-item" asp-action="QR" asp-route-id="@x.Id"><i class="fas fa-qrcode me-2"></i>QR</a></li>
-                                                    <li><hr class="dropdown-divider" /></li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item text-danger" onclick="confirmDelete(@x.Id, '@(x.Kode ?? x.LokasiNama)')">
-                                                            <i class="fas fa-trash me-2"></i>Hapus
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <div class="small text-muted">
-                                Halaman <strong>@safeCur</strong> dari <strong>@(Math.Max(1, totalPages))</strong>
-                            </div>
-                            <nav aria-label="Navigasi halaman">
-                                <ul class="pagination mb-0">
-                                    <li class="page-item @((safeCur <= 1 || totalPages == 0) ? "disabled" : "")">
-                                        <a class="page-link" href="@prevUrl" aria-label="Sebelumnya">Prev</a>
-                                    </li>
-
-                                    @if (left > 1)
-                                    {
-                                        <li class="page-item"><a class="page-link" href="@(pg(1))">1</a></li>
-                                        @if (left > 2)
-                                        {
-                                            <li class="page-item disabled"><span class="page-link">…</span></li>
-                                        }
-                                    }
-
-                                    @for (int i = left; i <= right; i++)
-                                    {
-                                        <li class="page-item @(i == safeCur ? "active" : "")">
-                                            <a class="page-link" href="@(pg(i))">@i</a>
-                                        </li>
-                                    }
-
-                                    @if (right < totalPages)
-                                    {
-                                        @if (right < totalPages - 1)
-                                        {
-                                            <li class="page-item disabled"><span class="page-link">…</span></li>
-                                        }
-                                        <li class="page-item"><a class="page-link" href="@(pg(totalPages))">@totalPages</a></li>
-                                    }
-
-                                    <li class="page-item @((safeCur >= totalPages || totalPages == 0) ? "disabled" : "")">
-                                        <a class="page-link" href="@nextUrl" aria-label="Berikutnya">Next</a>
-                                    </li>
-                                </ul>
-                            </nav>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="alert alert-info d-flex align-items-start gap-2">
-                            <i class="fas fa-info-circle mt-1"></i>
-                            <div>
-                                <div class="fw-semibold">Data tidak ditemukan.</div>
-                                <div class="small">Coba ubah kata kunci, filter, atau ukuran halaman.</div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-
+              </div>
+            }
+          </div>
         </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<!-- Modal Delete -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <!-- Danger Zone Modal -->
+  <div class="modal fade" id="dangerModal" tabindex="-1" aria-labelledby="dangerLabel" aria-hidden="true">
     <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 id="deleteModalLabel" class="modal-title">Konfirmasi Hapus</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body">
-                <p>Yakin ingin menghapus <strong id="delName"></strong>?</p>
-                <p class="text-danger small mb-0">Tindakan ini tidak dapat dibatalkan.</p>
-            </div>
-            <div class="modal-footer">
-                <form id="delForm" method="post">
-                    @Html.AntiForgeryToken()
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-danger">Hapus</button>
-                </form>
-            </div>
+      <div class="modal-content border-danger">
+        <div class="modal-header bg-danger text-white">
+          <h5 id="dangerLabel" class="modal-title">Mark as Expired</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
         </div>
+        <div class="modal-body">
+          <p>Menandai <strong id="dangerName"></strong> sebagai <span class="badge bg-dark">Exp</span>.</p>
+          <div class="mb-2">
+            <label class="form-label">Keterangan <span class="text-danger">*</span></label>
+            <input class="form-control" id="dangerReason" placeholder="Wajib diisi" />
+          </div>
+          <div class="alert alert-warning small mb-0"><i class="fas fa-info-circle me-1"></i> Data tidak dihapus.</div>
+        </div>
+        <div class="modal-footer">
+          <form id="dangerForm" method="post" asp-action="MarkExpired">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="dangerId" />
+            <input type="hidden" name="reason" id="dangerReasonHidden" />
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            <button type="submit" class="btn btn-danger" onclick="syncReason()">Mark as Expired</button>
+          </form>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
 @section Scripts {
     <script>
-        (function () {
-            window.confirmDelete = function (id, name) {
-                document.getElementById('delName').textContent = name || ('ID ' + id);
-                const form = document.getElementById('delForm');
-                form.action = '@Url.Action("Delete")/' + id; // POST /Peralatan/Delete/{id}
-                new bootstrap.Modal(document.getElementById('deleteModal')).show();
-            };
-        })();
+      function openDanger(id, name) {
+        document.getElementById('dangerId').value = id;
+        document.getElementById('dangerName').textContent = name || ('ID ' + id);
+        document.getElementById('dangerReason').value = '';
+        new bootstrap.Modal(document.getElementById('dangerModal')).show();
+      }
+      function syncReason() {
+        const r = document.getElementById('dangerReason').value.trim();
+        if (!r) { event.preventDefault(); alert('Keterangan wajib diisi.'); return false; }
+        document.getElementById('dangerReasonHidden').value = r;
+        return true;
+      }
     </script>
 }

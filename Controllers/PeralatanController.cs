@@ -1,4 +1,3 @@
-// Controllers/PeralatanController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -7,7 +6,8 @@ using System.Text;
 
 namespace AparWebAdmin.Controllers
 {
-    [Authorize] // 🔒 Wajib login
+    [Authorize]
+    [Route("Admin/[controller]")] // ➜ /Admin/Peralatan/...
     public class PeralatanController : Controller
     {
         private readonly HttpClient _httpClient;
@@ -19,13 +19,24 @@ namespace AparWebAdmin.Controllers
 
         private void SetApiBase() => ViewBag.ApiBase = _httpClient.BaseAddress?.ToString()?.TrimEnd('/');
 
-        // LIST
+        // =========================
+        // LIST (server-side filter)
+        // =========================
+        [HttpGet("")]
         [Authorize(Roles = "AdminWeb,Rescue")]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+            string? q,
+            int? jenisId,
+            int? lokasiId,
+            int page = 1,
+            int pageSize = 10,
+            string sortBy = "Kode",
+            string sortDir = "ASC")
         {
             try
             {
                 SetApiBase();
+
                 var response = await _httpClient.GetAsync("api/peralatan/admin");
                 if (!response.IsSuccessStatusCode)
                 {
@@ -34,9 +45,75 @@ namespace AparWebAdmin.Controllers
                 }
 
                 var json = await response.Content.ReadAsStringAsync();
-                var peralatan = JsonConvert.DeserializeObject<List<Peralatan>>(json) ?? new List<Peralatan>();
-                await LoadFilterDropdownDataForIndex(peralatan);
-                return View(peralatan);
+                var all = JsonConvert.DeserializeObject<List<Peralatan>>(json) ?? new List<Peralatan>();
+
+                // normalisasi ringan (hindari null/whitespace)
+                foreach (var x in all)
+                {
+                    x.Kode = x.Kode?.Trim();
+                    x.JenisNama = x.JenisNama?.Trim();
+                    x.LokasiNama = x.LokasiNama?.Trim();
+                    x.Status = x.Status?.Trim();
+                    x.Keterangan = x.Keterangan?.Trim();
+                }
+
+                // hanya yang BELUM expired
+                bool NotExpired(Peralatan p)
+                {
+                    var byStatus = !string.Equals(p.Status ?? "", "Exp", StringComparison.OrdinalIgnoreCase);
+                    var byDate = !p.Exp_Date.HasValue || p.Exp_Date.Value.Date >= DateTime.Today;
+                    return byStatus && byDate;
+                }
+                var data = all.Where(NotExpired).ToList();
+
+                // search/filter
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    var key = q.Trim().ToLowerInvariant();
+                    data = data.Where(x =>
+                        (x.Kode ?? "").ToLower().Contains(key) ||
+                        (x.LokasiNama ?? "").ToLower().Contains(key) ||
+                        (x.JenisNama ?? "").ToLower().Contains(key) ||
+                        (x.Spesifikasi ?? "").ToLower().Contains(key) ||
+                        (x.Keterangan ?? "").ToLower().Contains(key)
+                    ).ToList();
+                }
+                if (jenisId is > 0) data = data.Where(x => x.JenisId == jenisId).ToList();
+                if (lokasiId is > 0) data = data.Where(x => x.LokasiId == lokasiId).ToList();
+
+                // sorting
+                bool asc = !string.Equals(sortDir, "DESC", StringComparison.OrdinalIgnoreCase);
+                data = (sortBy?.ToLowerInvariant()) switch
+                {
+                    "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama) : data.OrderByDescending(x => x.LokasiNama)).ToList(),
+                    "jenis" => (asc ? data.OrderBy(x => x.JenisNama) : data.OrderByDescending(x => x.JenisNama)).ToList(),
+                    "exp_date" => (asc ? data.OrderBy(x => x.Exp_Date) : data.OrderByDescending(x => x.Exp_Date)).ToList(),
+                    "status" => (asc ? data.OrderBy(x => x.Status) : data.OrderByDescending(x => x.Status)).ToList(),
+                    _ => (asc ? data.OrderBy(x => x.Kode) : data.OrderByDescending(x => x.Kode)).ToList()
+                };
+
+                // paging
+                page = Math.Max(1, page);
+                pageSize = pageSize <= 0 ? 10 : pageSize;
+                var total = data.Count;
+                var totalPages = Math.Max(1, (int)Math.Ceiling(total / Math.Max(1.0, pageSize)));
+                page = Math.Min(page, totalPages);
+                var paged = data.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+                // dropdowns
+                await LoadFilterDropdownDataForIndex(all);
+
+                // viewbag ui
+                ViewBag.Query = q ?? "";
+                ViewBag.JenisId = jenisId;
+                ViewBag.LokasiId = lokasiId;
+                ViewBag.SortBy = sortBy;
+                ViewBag.SortDir = asc ? "ASC" : "DESC";
+                ViewBag.Page = page;
+                ViewBag.PageSize = pageSize;
+                ViewBag.Total = total;
+
+                return View(paged);
             }
             catch (Exception ex)
             {
@@ -45,7 +122,118 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // CREATE GET
+        // ==========================
+        // LIST EXPIRED (server-side)
+        // ==========================
+        [HttpGet("Expired")]
+        [Authorize(Roles = "AdminWeb,Rescue")]
+        public async Task<IActionResult> Expired(
+            string? q,
+            int? jenisId,
+            int? lokasiId,
+            int page = 1,
+            int pageSize = 10,
+            string sortBy = "Kode",
+            string sortDir = "ASC")
+        {
+            try
+            {
+                SetApiBase();
+
+                // Pakai filter dari API Node (lebih hemat), fallback nanti kita filter lagi di sini
+                var resp = await _httpClient.GetAsync("api/peralatan/admin?onlyExp=1");
+                if (!resp.IsSuccessStatusCode)
+                {
+                    ViewBag.Error = await ReadApiErrorAsync(resp, "Gagal memuat data peralatan Exp");
+                    return View("Expired", new List<Peralatan>());
+                }
+
+                var json = await resp.Content.ReadAsStringAsync();
+                var all = JsonConvert.DeserializeObject<List<Peralatan>>(json) ?? new List<Peralatan>();
+
+                // normalisasi
+                foreach (var x in all)
+                {
+                    x.Kode = x.Kode?.Trim();
+                    x.JenisNama = x.JenisNama?.Trim();
+                    x.LokasiNama = x.LokasiNama?.Trim();
+                    x.Status = x.Status?.Trim();
+                    x.Keterangan = x.Keterangan?.Trim();
+                }
+
+                // backup filter di sisi .NET (kalau Node belum diupdate)
+                bool IsExpired(Peralatan p)
+                {
+                    bool byStatus = string.Equals(p.Status ?? "", "Exp", StringComparison.OrdinalIgnoreCase);
+                    bool byDate = p.Exp_Date.HasValue && p.Exp_Date.Value.Date < DateTime.Today;
+                    return byStatus || byDate;
+                }
+                var data = all.Where(IsExpired).ToList();
+
+                // search + filter
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    var key = q.Trim().ToLowerInvariant();
+                    data = data.Where(x =>
+                        (x.Kode ?? "").ToLower().Contains(key) ||
+                        (x.LokasiNama ?? "").ToLower().Contains(key) ||
+                        (x.JenisNama ?? "").ToLower().Contains(key) ||
+                        (x.Spesifikasi ?? "").ToLower().Contains(key) ||
+                        (x.Keterangan ?? "").ToLower().Contains(key) ||
+                        (x.Status ?? "").ToLower().Contains(key)
+                    ).ToList();
+                }
+                if (jenisId is > 0) data = data.Where(x => x.JenisId == jenisId).ToList();
+                if (lokasiId is > 0) data = data.Where(x => x.LokasiId == lokasiId).ToList();
+
+                // sort
+                bool asc = !string.Equals(sortDir, "DESC", StringComparison.OrdinalIgnoreCase);
+                data = (sortBy?.ToLowerInvariant()) switch
+                {
+                    "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama) : data.OrderByDescending(x => x.LokasiNama)).ToList(),
+                    "jenis" => (asc ? data.OrderBy(x => x.JenisNama) : data.OrderByDescending(x => x.JenisNama)).ToList(),
+                    "status" => (asc ? data.OrderBy(x => x.Status) : data.OrderByDescending(x => x.Status)).ToList(),
+                    "exp_date" => (asc ? data.OrderBy(x => x.Exp_Date) : data.OrderByDescending(x => x.Exp_Date)).ToList(),
+                    "updated" => (asc ? data.OrderBy(x => x.Tanggal_Update_Alat) : data.OrderByDescending(x => x.Tanggal_Update_Alat)).ToList(),
+                    _ => (asc ? data.OrderBy(x => x.Kode) : data.OrderByDescending(x => x.Kode)).ToList()
+                };
+
+                // paging
+                page = Math.Max(1, page);
+                pageSize = pageSize <= 0 ? 10 : pageSize;
+                var total = data.Count;
+                var totalPages = Math.Max(1, (int)Math.Ceiling(total / Math.Max(1.0, pageSize)));
+                page = Math.Min(page, totalPages);
+                var paged = data.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+
+                // dropdown
+                await LoadFilterDropdownDataForIndex(all);
+
+                // viewbag
+                ViewBag.Query = q ?? "";
+                ViewBag.JenisId = jenisId;
+                ViewBag.LokasiId = lokasiId;
+                ViewBag.SortBy = sortBy;
+                ViewBag.SortDir = asc ? "ASC" : "DESC";
+                ViewBag.Page = page;
+                ViewBag.PageSize = pageSize;
+                ViewBag.Total = total;
+
+                return View("Expired", paged);
+            }
+            catch (Exception ex)
+            {
+                ViewBag.Error = $"Error: {ex.Message}";
+                return View("Expired", new List<Peralatan>());
+            }
+        }
+
+
+
+        // =============
+        // CREATE (GET)
+        // =============
+        [HttpGet("Create")]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create()
         {
@@ -54,8 +242,10 @@ namespace AparWebAdmin.Controllers
             return View();
         }
 
-        // CREATE POST
-        [HttpPost, ValidateAntiForgeryToken]
+        // =============
+        // CREATE (POST)
+        // =============
+        [HttpPost("Create"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Create(Peralatan peralatan, List<IFormFile> files)
         {
@@ -73,6 +263,9 @@ namespace AparWebAdmin.Controllers
                 form.Add(new StringContent(peralatan.JenisId.ToString()), "JenisId");
                 form.Add(new StringContent(peralatan.LokasiId.ToString()), "LokasiId");
                 form.Add(new StringContent(peralatan.Spesifikasi ?? ""), "Spesifikasi");
+
+                if (peralatan.Exp_Date.HasValue)
+                    form.Add(new StringContent(peralatan.Exp_Date.Value.ToString("yyyy-MM-dd")), "exp_date");
 
                 if (files != null)
                 {
@@ -93,10 +286,7 @@ namespace AparWebAdmin.Controllers
                     return View(peralatan);
                 }
 
-                var responseBody = await resp.Content.ReadAsStringAsync();
-                dynamic result = JsonConvert.DeserializeObject(responseBody)!;
                 TempData["Success"] = "Peralatan berhasil ditambahkan";
-                TempData["TokenQR"] = (string?)result?.tokenQR;
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
@@ -107,7 +297,10 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // EDIT GET
+        // ===========
+        // EDIT (GET)
+        // ===========
+        [HttpGet("Edit/{id:int}")]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id)
         {
@@ -133,8 +326,10 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // EDIT POST
-        [HttpPost, ValidateAntiForgeryToken]
+        // ============
+        // EDIT (POST)
+        // ============
+        [HttpPost("Edit/{id:int}"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id, Peralatan peralatan, List<IFormFile> files, bool? replacePhotos)
         {
@@ -152,6 +347,14 @@ namespace AparWebAdmin.Controllers
                 form.Add(new StringContent(peralatan.LokasiId.ToString()), "LokasiId");
                 form.Add(new StringContent(peralatan.Spesifikasi ?? ""), "Spesifikasi");
                 form.Add(new StringContent((replacePhotos ?? false).ToString().ToLowerInvariant()), "replacePhotos");
+
+                if (peralatan.Exp_Date.HasValue)
+                    form.Add(new StringContent(peralatan.Exp_Date.Value.ToString("yyyy-MM-dd")), "exp_date");
+
+                if (!string.IsNullOrWhiteSpace(peralatan.Status))
+                    form.Add(new StringContent(peralatan.Status), "status");
+                if (!string.IsNullOrWhiteSpace(peralatan.Keterangan))
+                    form.Add(new StringContent(peralatan.Keterangan), "keterangan");
 
                 if (files != null)
                 {
@@ -183,7 +386,54 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        // ============================
+        // MARK AS EXPIRED (DangerZone)
+        // ============================
+        [HttpPost("MarkExpired"), ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> MarkExpired(int id, string reason)
+        {
+            try
+            {
+                var get = await _httpClient.GetAsync($"api/peralatan/admin/{id}");
+                if (!get.IsSuccessStatusCode)
+                {
+                    TempData["Error"] = await ReadApiErrorAsync(get, "Peralatan tidak ditemukan");
+                    return RedirectToAction(nameof(Index));
+                }
+                var json = await get.Content.ReadAsStringAsync();
+                var alat = JsonConvert.DeserializeObject<Peralatan>(json) ?? new();
+
+                using var form = new MultipartFormDataContent();
+                form.Add(new StringContent(alat.Kode ?? ""), "Kode");
+                form.Add(new StringContent(alat.JenisId.ToString()), "JenisId");
+                form.Add(new StringContent(alat.LokasiId.ToString()), "LokasiId");
+                form.Add(new StringContent(alat.Spesifikasi ?? ""), "Spesifikasi");
+                form.Add(new StringContent((alat.Exp_Date ?? DateTime.Today).ToString("yyyy-MM-dd")), "exp_date");
+                form.Add(new StringContent("Exp"), "status");
+                form.Add(new StringContent(reason ?? ""), "keterangan");
+
+                var resp = await _httpClient.PutAsync($"api/peralatan/admin/{id}", form);
+                if (!resp.IsSuccessStatusCode)
+                {
+                    TempData["Error"] = await ReadApiErrorAsync(resp, "Gagal menandai sebagai Exp");
+                    return RedirectToAction(nameof(Edit), new { id });
+                }
+
+                TempData["Success"] = "Status peralatan diubah menjadi Exp dan timestamp diperbarui.";
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = $"Error: {ex.Message}";
+                return RedirectToAction(nameof(Edit), new { id });
+            }
+        }
+
+        // =====================
+        // FOTO: append & delete
+        // =====================
+        [HttpPost("AddPhotos/{id:int}"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> AddPhotos(int id, List<IFormFile> files)
         {
@@ -215,7 +465,7 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        [HttpPost("DeletePhoto/{id:int}"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> DeletePhoto(int id, string path)
         {
@@ -239,25 +489,16 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        [HttpPost, ValidateAntiForgeryToken]
+        // samakan "Delete" dengan mark expired (opsional)
+        [HttpPost("Delete/{id:int}"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            try
-            {
-                var response = await _httpClient.DeleteAsync($"api/peralatan/admin/{id}");
-                TempData[response.IsSuccessStatusCode ? "Success" : "Error"] =
-                    response.IsSuccessStatusCode ? "Peralatan berhasil dihapus" :
-                    await ReadApiErrorAsync(response, "Gagal menghapus peralatan");
-            }
-            catch (Exception ex)
-            {
-                TempData["Error"] = $"Error: {ex.Message}";
-            }
-            return RedirectToAction(nameof(Index));
-        }
+        public Task<IActionResult> Delete(int id, string? reason)
+            => MarkExpired(id, reason ?? "Ditandai Exp via daftar peralatan");
 
-        // ====== QR VIEW ======
+        // =========
+        // QR & VIEW
+        // =========
+        [HttpGet("QR/{id:int}")]
         [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> QR(int id)
         {
@@ -274,7 +515,6 @@ namespace AparWebAdmin.Controllers
 
                 var json = await resp.Content.ReadAsStringAsync();
 
-                // Support: langsung QRCodeResponse atau wrapper { data: {...} }
                 QRCodeResponse? qrData;
                 try
                 {
@@ -301,22 +541,15 @@ namespace AparWebAdmin.Controllers
                     return RedirectToAction(nameof(Index));
                 }
 
-                // Fallback QrUrl jika backend belum menyuplai
                 if (string.IsNullOrWhiteSpace(qrData.QrUrl))
                 {
                     var apiBase = (ViewBag.ApiBase as string) ?? _httpClient.BaseAddress?.ToString()?.TrimEnd('/');
                     qrData.QrUrl = $"{apiBase}/api/peralatan/with-checklist?token={qrData.TokenQR}";
                 }
 
-                // Fallback QrData agar ringkas
                 if (string.IsNullOrWhiteSpace(qrData.QrData))
                 {
-                    qrData.QrData = JsonConvert.SerializeObject(new
-                    {
-                        t = qrData.TokenQR,
-                        k = qrData.Kode,
-                        v = 1
-                    });
+                    qrData.QrData = JsonConvert.SerializeObject(new { t = qrData.TokenQR, k = qrData.Kode, v = 1 });
                 }
 
                 return View(qrData);
@@ -328,6 +561,7 @@ namespace AparWebAdmin.Controllers
             }
         }
 
+        [HttpGet("Details/{id:int}")]
         [Authorize(Roles = "AdminWeb,Rescue")]
         public async Task<IActionResult> Details(int id)
         {
@@ -344,7 +578,6 @@ namespace AparWebAdmin.Controllers
                 var peralatanJson = await peralatanRes.Content.ReadAsStringAsync();
                 var peralatan = JsonConvert.DeserializeObject<Peralatan>(peralatanJson) ?? new Peralatan();
 
-                // opsional riwayat
                 var historyRes = await _httpClient.GetAsync($"api/perawatan/history/{id}");
                 var riwayat = new List<Maintenance>();
                 if (historyRes.IsSuccessStatusCode)
@@ -365,7 +598,9 @@ namespace AparWebAdmin.Controllers
             }
         }
 
-        // ===== Helpers =====
+        // =================
+        // Helpers (dropdown)
+        // =================
         private async Task LoadDropdownData()
         {
             try
