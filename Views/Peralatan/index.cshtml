@@ -261,7 +261,7 @@
                       <th>Spesifikasi</th>
                       <th>Keterangan</th>
                       <th>Foto</th>
-                      <th class="text-end" style="width:170px;">Aksi</th>
+                      <th class="text-end">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -278,7 +278,6 @@
                       }
                       <tr>
                         <td><span class="badge bg-secondary kode-badge">@x.Kode</span></td>
-                        <td>@(string.IsNullOrWhiteSpace(x.LokasiNama) ? "-" : x.LokasiNama)</td>
                         <td>
                           @if (string.IsNullOrWhiteSpace(x.LokasiNama))
                           {

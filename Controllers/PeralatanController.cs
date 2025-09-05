@@ -53,6 +53,7 @@ namespace AparWebAdmin.Controllers
                     x.Kode = x.Kode?.Trim();
                     x.JenisNama = x.JenisNama?.Trim();
                     x.LokasiNama = x.LokasiNama?.Trim();
+                    x.DetailNamaLokasi = x.DetailNamaLokasi?.Trim(); // ✅ penting utk filter tampilan
                     x.Status = x.Status?.Trim();
                     x.Keterangan = x.Keterangan?.Trim();
                 }
@@ -73,6 +74,7 @@ namespace AparWebAdmin.Controllers
                     data = data.Where(x =>
                         (x.Kode ?? "").ToLower().Contains(key) ||
                         (x.LokasiNama ?? "").ToLower().Contains(key) ||
+                        (x.DetailNamaLokasi ?? "").ToLower().Contains(key) || // ✅ ikut dicari
                         (x.JenisNama ?? "").ToLower().Contains(key) ||
                         (x.Spesifikasi ?? "").ToLower().Contains(key) ||
                         (x.Keterangan ?? "").ToLower().Contains(key)
@@ -85,7 +87,8 @@ namespace AparWebAdmin.Controllers
                 bool asc = !string.Equals(sortDir, "DESC", StringComparison.OrdinalIgnoreCase);
                 data = (sortBy?.ToLowerInvariant()) switch
                 {
-                    "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama) : data.OrderByDescending(x => x.LokasiNama)).ToList(),
+                    "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama).ThenBy(x => x.DetailNamaLokasi)
+                                     : data.OrderByDescending(x => x.LokasiNama).ThenByDescending(x => x.DetailNamaLokasi)).ToList(), // ✅
                     "jenis" => (asc ? data.OrderBy(x => x.JenisNama) : data.OrderByDescending(x => x.JenisNama)).ToList(),
                     "exp_date" => (asc ? data.OrderBy(x => x.Exp_Date) : data.OrderByDescending(x => x.Exp_Date)).ToList(),
                     "status" => (asc ? data.OrderBy(x => x.Status) : data.OrderByDescending(x => x.Status)).ToList(),
@@ -157,6 +160,7 @@ namespace AparWebAdmin.Controllers
                     x.Kode = x.Kode?.Trim();
                     x.JenisNama = x.JenisNama?.Trim();
                     x.LokasiNama = x.LokasiNama?.Trim();
+                    x.DetailNamaLokasi = x.DetailNamaLokasi?.Trim(); // ✅
                     x.Status = x.Status?.Trim();
                     x.Keterangan = x.Keterangan?.Trim();
                 }
@@ -177,6 +181,7 @@ namespace AparWebAdmin.Controllers
                     data = data.Where(x =>
                         (x.Kode ?? "").ToLower().Contains(key) ||
                         (x.LokasiNama ?? "").ToLower().Contains(key) ||
+                        (x.DetailNamaLokasi ?? "").ToLower().Contains(key) || // ✅
                         (x.JenisNama ?? "").ToLower().Contains(key) ||
                         (x.Spesifikasi ?? "").ToLower().Contains(key) ||
                         (x.Keterangan ?? "").ToLower().Contains(key) ||
@@ -190,7 +195,8 @@ namespace AparWebAdmin.Controllers
                 bool asc = !string.Equals(sortDir, "DESC", StringComparison.OrdinalIgnoreCase);
                 data = (sortBy?.ToLowerInvariant()) switch
                 {
-                    "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama) : data.OrderByDescending(x => x.LokasiNama)).ToList(),
+                    "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama).ThenBy(x => x.DetailNamaLokasi)
+                                     : data.OrderByDescending(x => x.LokasiNama).ThenByDescending(x => x.DetailNamaLokasi)).ToList(), // ✅
                     "jenis" => (asc ? data.OrderBy(x => x.JenisNama) : data.OrderByDescending(x => x.JenisNama)).ToList(),
                     "status" => (asc ? data.OrderBy(x => x.Status) : data.OrderByDescending(x => x.Status)).ToList(),
                     "exp_date" => (asc ? data.OrderBy(x => x.Exp_Date) : data.OrderByDescending(x => x.Exp_Date)).ToList(),
@@ -227,8 +233,6 @@ namespace AparWebAdmin.Controllers
                 return View("Expired", new List<Peralatan>());
             }
         }
-
-
 
         // =============
         // CREATE (GET)
@@ -333,6 +337,9 @@ namespace AparWebAdmin.Controllers
         [Authorize(Roles = "AdminWeb")]
         public async Task<IActionResult> Edit(int id, Peralatan peralatan, List<IFormFile> files, bool? replacePhotos)
         {
+            if (id != peralatan.Id)
+                return BadRequest();
+
             if (!ModelState.IsValid)
             {
                 SetApiBase(); await LoadDropdownData();
@@ -605,15 +612,26 @@ namespace AparWebAdmin.Controllers
         {
             try
             {
+                // ==== Lokasi (ikutkan DetailNamaLokasi) ====
                 var lokasiResponse = await _httpClient.GetAsync("api/lokasi");
                 if (lokasiResponse.IsSuccessStatusCode)
                 {
                     var lokasiJson = await lokasiResponse.Content.ReadAsStringAsync();
                     var lokasiList = JsonConvert.DeserializeObject<List<Lokasi>>(lokasiJson) ?? new List<Lokasi>();
-                    ViewBag.LokasiList = lokasiList.Select(l => new DropdownItem { Id = l.Id, Nama = l.Nama }).ToList();
+                    ViewBag.LokasiList = lokasiList
+                        .Select(l => new DropdownItem
+                        {
+                            Id = l.Id,
+                            Nama = l.Nama ?? string.Empty,
+                            DetailNamaLokasi = l.DetailNamaLokasi ?? string.Empty // ✅ kunci
+                        })
+                        .OrderBy(x => x.Nama)
+                        .ThenBy(x => x.DetailNamaLokasi)
+                        .ToList();
                 }
                 else ViewBag.LokasiList = new List<DropdownItem>();
 
+                // ==== Jenis (tetap) ====
                 var jenisResponse = await _httpClient.GetAsync("api/jenis-peralatan");
                 if (jenisResponse.IsSuccessStatusCode)
                 {
@@ -623,7 +641,7 @@ namespace AparWebAdmin.Controllers
                     {
                         Id = j.Id,
                         Nama = $"{j.Nama} ({j.IntervalPemeriksaanBulan} bulan)"
-                    }).ToList();
+                    }).OrderBy(x => x.Nama).ToList();
                 }
                 else ViewBag.JenisList = new List<DropdownItem>();
             }
@@ -659,11 +677,20 @@ namespace AparWebAdmin.Controllers
                 {
                     var lokasiJson = await lokasiResp.Content.ReadAsStringAsync();
                     var lokasiList = JsonConvert.DeserializeObject<List<Lokasi>>(lokasiJson) ?? new List<Lokasi>();
-                    ViewBag.FilterLokasi = lokasiList.Select(l => new DropdownItem { Id = l.Id, Nama = l.Nama })
-                                                     .OrderBy(x => x.Nama).ToList();
+                    ViewBag.FilterLokasi = lokasiList
+                        .Select(l => new DropdownItem
+                        {
+                            Id = l.Id,
+                            Nama = l.Nama ?? string.Empty,
+                            DetailNamaLokasi = l.DetailNamaLokasi ?? string.Empty // ✅ dibawa juga utk tampilan filter (kalau mau dipakai)
+                        })
+                        .OrderBy(x => x.Nama)
+                        .ThenBy(x => x.DetailNamaLokasi)
+                        .ToList();
                 }
                 else
                 {
+                    // fallback dari data list (tidak punya detail lokasi di payload lama)
                     ViewBag.FilterLokasi = data.Where(x => x.LokasiId != 0 && !string.IsNullOrWhiteSpace(x.LokasiNama))
                                                .GroupBy(x => new { x.LokasiId, x.LokasiNama })
                                                .Select(g => new DropdownItem { Id = g.Key.LokasiId, Nama = g.Key.LokasiNama! })

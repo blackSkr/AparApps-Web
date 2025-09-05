@@ -2,7 +2,13 @@
 @{
     var lokasiList = ViewBag.LokasiList as List<AparAppsWebsite.Models.DropdownItem> ?? new();
     var jenisList = ViewBag.JenisList as List<AparAppsWebsite.Models.DropdownItem> ?? new();
+
+    string LabelLokasi(AparAppsWebsite.Models.DropdownItem l)
+    => string.IsNullOrWhiteSpace(l.DetailNamaLokasi)
+    ? l.Nama
+    : $"{l.Nama} — {l.DetailNamaLokasi}";
 }
+
 <div class="row g-3">
     <div class="col-md-4">
         <label class="form-label">Kode</label>
@@ -24,13 +30,16 @@
 
     <div class="col-md-4">
         <label class="form-label">Lokasi</label>
-        <select asp-for="LokasiId" class="form-select">
+        <select asp-for="LokasiId" class="form-select" id="ddlLokasi">
             <option value="">— Pilih Lokasi —</option>
             @foreach (var l in lokasiList)
             {
-                <option value="@l.Id">@l.Nama</option>
+                <option value="@l.Id" data-nama="@l.Nama" data-detail="@l.DetailNamaLokasi">
+                    @LabelLokasi(l)
+                </option>
             }
         </select>
+        <div class="form-text" id="lokasiHelp">Format: Nama Lokasi — Detail Nama Lokasi</div>
         <span asp-validation-for="LokasiId" class="text-danger"></span>
     </div>
 
@@ -62,3 +71,26 @@
         <input asp-for="Keterangan" class="form-control" />
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const ddl = document.getElementById('ddlLokasi');
+            const help = document.getElementById('lokasiHelp');
+
+            function refreshHelp() {
+                const opt = ddl.options[ddl.selectedIndex];
+                if (!opt || !opt.value) {
+                    help.textContent = 'Format: Nama Lokasi — Detail Nama Lokasi';
+                    return;
+                }
+                const nama = opt.getAttribute('data-nama') || '';
+                const detail = opt.getAttribute('data-detail') || '';
+                help.textContent = detail ? `Terpilih: ${nama} — ${detail}` : `Terpilih: ${nama}`;
+            }
+
+            ddl?.addEventListener('change', refreshHelp);
+            refreshHelp();
+        })();
+    </script>
+}

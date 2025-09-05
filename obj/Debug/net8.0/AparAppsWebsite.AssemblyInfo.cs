@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AparAppsWebsite")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7cc9773c080ed7d35934b36a629a919931eb055f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+53db685f68aacf808b6883c1d6d465c6c9b19a96")]
 [assembly: System.Reflection.AssemblyProductAttribute("AparAppsWebsite")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AparAppsWebsite")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

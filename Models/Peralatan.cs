@@ -11,7 +11,7 @@ namespace AparAppsWebsite.Models
         public int LokasiId { get; set; }
         public string? LokasiNama { get; set; }
 
-        public string? DetailNamaLokasi { get; set; }  // ✅ baru
+        public string? DetailNamaLokasi { get; set; }  // ✅ untuk tampilan, tidak mengubah prosedur simpan
 
         public string? Spesifikasi { get; set; }
         public string? TokenQR { get; set; }

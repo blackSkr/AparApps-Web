@@ -10,7 +10,7 @@
         <div class="col-md-10">
             <div class="card">
                 <div class="card-header text-center bg-primary text-white">
-                    <h3 class="card-title mb-0">QR Code Professional</h3>
+                    <h3 class="card-title mb-0">QR Code Preview</h3>
                     <p class="mb-0">Equipment: <strong>@Model.Kode</strong></p>
                 </div>
 
@@ -127,7 +127,7 @@
                     <hr>
 
                     <!-- Professional Print Layout Preview -->
-                    <div class="row">
+                    @* <div class="row">
                         <div class="col-12">
                             <h5 class="text-primary">Professional Label Preview</h5>
                             <div class="print-preview border rounded p-3 bg-light">
@@ -161,7 +161,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> *@
                 </div>
 
                 <div class="card-footer">
@@ -392,14 +392,14 @@
             const src = !canvas.classList.contains('d-none') ? canvas.toDataURL('image/png') : imgTag.src;
             const win = window.open('', '_blank');
             win.document.write(`
-              <div style="text-align:center;font-family:Arial;">
-                <h2>${kode}</h2>
-                <img src="${src}" style="width:300px;height:300px;">
-                <p>Scan untuk info lengkap</p>
-                <small>Generated: ${new Date().toLocaleString()}</small>
-              </div>
-              <script>window.onload=()=>window.print()<\/script>
-            `);
+                      <div style="text-align:center;font-family:Arial;">
+                        <h2>${kode}</h2>
+                        <img src="${src}" style="width:300px;height:300px;">
+                        <p>Scan untuk info lengkap</p>
+                        <small>Generated: ${new Date().toLocaleString()}</small>
+                      </div>
+                      <script>window.onload=()=>window.print()<\/script>
+                    `);
             win.document.close();
         }
         function showQRData() {

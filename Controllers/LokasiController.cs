@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
-using System.Net.Http; // ← pastikan ada di bagian using
+using System.Net.Http;
 
 // Alias
 using AparLokasi = AparAppsWebsite.Models.Lokasi;
@@ -86,7 +86,7 @@ namespace AparWebAdmin.Controllers
                 var qq = q.Trim().ToLowerInvariant();
                 all = all.Where(l =>
                         (l.Nama ?? "").ToLower().Contains(qq) ||
-                        (l.DetailNamaLokasi ?? "").ToLower().Contains(qq) || // ✅ dukung filter
+                        (l.DetailNamaLokasi ?? "").ToLower().Contains(qq) ||
                         (l.PIC_Nama ?? "").ToLower().Contains(qq) ||
                         (l.PIC_BadgeNumber ?? "").ToLower().Contains(qq))
                     .ToList();
@@ -94,7 +94,7 @@ namespace AparWebAdmin.Controllers
 
             var total = all.Count;
             var items = all.OrderBy(l => l.Nama ?? string.Empty)
-                           .ThenBy(l => l.DetailNamaLokasi ?? string.Empty) // ✅ urutkan juga
+                           .ThenBy(l => l.DetailNamaLokasi ?? string.Empty)
                            .Skip(Math.Max(0, (page - 1) * pageSize))
                            .Take(pageSize)
                            .ToList();
@@ -147,7 +147,7 @@ namespace AparWebAdmin.Controllers
             var payload = new AparLokasiFormRequest
             {
                 nama = vm.Nama?.Trim(),
-                detailNamaLokasi = vm.DetailNamaLokasi?.Trim(), // ✅ kirim field baru
+                detailNamaLokasi = vm.DetailNamaLokasi?.Trim(),
                 lat = lat6,
                 @long = lon6,
                 picPetugasId = vm.PICPetugasId
@@ -181,7 +181,6 @@ namespace AparWebAdmin.Controllers
             TempData["Success"] = "Lokasi berhasil dibuat.";
             return RedirectToAction(nameof(Details), new { id = data?.Id ?? 0 });
         }
-
 
         // Link petugas existing ke lokasi; opsi jadikan PIC
         private async Task<(bool ok, string? err)> AddPetugasToLokasiAsync(int lokasiId, int petugasId, bool asPIC)
@@ -233,7 +232,7 @@ namespace AparWebAdmin.Controllers
             {
                 Id = lokasi.Id,
                 Nama = lokasi.Nama,
-                DetailNamaLokasi = lokasi.DetailNamaLokasi, // ✅
+                DetailNamaLokasi = lokasi.DetailNamaLokasi,
                 lat = ToDouble(lokasi.lat),
                 Longitude = ToDouble(lokasi.@long),
                 PICPetugasId = lokasi.PICPetugasId,
@@ -280,7 +279,7 @@ namespace AparWebAdmin.Controllers
             {
                 Id = lokasi.Id,
                 Nama = lokasi.Nama,
-                DetailNamaLokasi = lokasi.DetailNamaLokasi, // ✅
+                DetailNamaLokasi = lokasi.DetailNamaLokasi,
                 lat = ToDouble(lokasi.lat),
                 Longitude = ToDouble(lokasi.@long),
                 PICPetugasId = lokasi.PICPetugasId,
@@ -348,7 +347,7 @@ namespace AparWebAdmin.Controllers
             var payload = new AparLokasiFormRequest
             {
                 nama = vm.Nama?.Trim(),
-                detailNamaLokasi = vm.DetailNamaLokasi?.Trim(), // ✅ kirim field baru
+                detailNamaLokasi = vm.DetailNamaLokasi?.Trim(),
                 lat = lat6,
                 @long = lon6,
                 picPetugasId = vm.PICPetugasId
@@ -378,6 +377,73 @@ namespace AparWebAdmin.Controllers
             }
             TempData["Error"] = err ?? "Gagal menghapus lokasi.";
             return RedirectToAction(nameof(Details), new { id });
+        }
+
+        // =========================== (NEW) LINK/UNLINK ACTIONS ===========================
+        // Dipanggil oleh form di Details/Edit: asp-action="AddPetugas"
+        [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> AddPetugas(int lokasiId, int petugasId, bool asPIC = false)
+        {
+            var (ok, err) = await AddPetugasToLokasiAsync(lokasiId, petugasId, asPIC);
+            if (!ok)
+                TempData["Error"] = err ?? "Gagal menautkan petugas.";
+            else
+                TempData["Success"] = asPIC ? "Berhasil menjadikan PIC." : "Petugas berhasil ditautkan.";
+
+            // Kembali ke halaman Edit supaya list langsung kelihatan
+            return RedirectToAction(nameof(Edit), new { id = lokasiId });
+        }
+
+        // Dipanggil oleh form di Details/Edit: asp-action="UnlinkPetugas"
+        [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> UnlinkPetugas(int lokasiId, int petugasId)
+        {
+            try
+            {
+                var res = await _http.DeleteAsync(PathUnlinkPetugas(lokasiId, petugasId));
+                if (!res.IsSuccessStatusCode)
+                {
+                    TempData["Error"] = await SafeReadErrorAsync(res) ?? "Gagal unlink petugas.";
+                }
+                else
+                {
+                    TempData["Success"] = "Petugas berhasil di-unlink.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "UnlinkPetugas error (lokasiId={LokasiId}, petugasId={PetugasId})", lokasiId, petugasId);
+                TempData["Error"] = ex.Message;
+            }
+
+            return RedirectToAction(nameof(Edit), new { id = lokasiId });
+        }
+
+        // Dipanggil oleh form di Edit: asp-action="AddManyPIC" (menambah beberapa PIC tambahan)
+        [HttpPost, ValidateAntiForgeryToken]
+        [Authorize(Roles = "AdminWeb")]
+        public async Task<IActionResult> AddManyPIC(int lokasiId, int[]? petugasIds)
+        {
+            if (petugasIds == null || petugasIds.Length == 0)
+            {
+                TempData["Warning"] = "Tidak ada petugas yang dipilih.";
+                return RedirectToAction(nameof(Edit), new { id = lokasiId });
+            }
+
+            int okCount = 0;
+            foreach (var pid in petugasIds.Distinct())
+            {
+                var (ok, err) = await AddPetugasToLokasiAsync(lokasiId, pid, asPIC: true);
+                if (!ok)
+                    TempData["Warning"] = (TempData["Warning"] as string ?? "") + $"Gagal tambah PetugasId={pid}: {err}. ";
+                else
+                    okCount++;
+            }
+
+            if (okCount > 0) TempData["Success"] = $"Berhasil menambah {okCount} PIC.";
+            return RedirectToAction(nameof(Edit), new { id = lokasiId });
         }
 
         // =========================== API Helpers ===========================
@@ -546,12 +612,11 @@ namespace AparWebAdmin.Controllers
                     lokasi.Id = GetInt(lokasiEl, "Id", "id");
                     lokasi.Nama = GetString(lokasiEl, "Nama", "nama", "Name");
 
-                    // ✅ Ambil semua kemungkinan kunci:
                     lokasi.DetailNamaLokasi = GetString(
                         lokasiEl,
-                        "DetailNamaLokasi", "detailNamaLokasi",  // camelCase baru
-                        "detail_nama_lokasi",                    // snake_case DB
-                        "DetailNama"                              // fallback lama (jika ada)
+                        "DetailNamaLokasi", "detailNamaLokasi",
+                        "detail_nama_lokasi",
+                        "DetailNama"
                     );
 
                     var lat = GetDouble(lokasiEl, "lat", "latitude", "Lat", "Latitude");
