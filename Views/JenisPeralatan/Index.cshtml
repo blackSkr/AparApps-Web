@@ -126,7 +126,7 @@
                             <table id="jenisTable" class="table table-hover align-middle mb-0">
                                 <thead class="table-light sticky-head">
                                     <tr>
-                                        <th style="width:80px;">ID</th>
+                                        @* <th style="width:80px;">ID</th> *@
                                         <th>Nama Jenis</th>
                                         <th style="width:180px;">Interval (Bulan)</th>
                                         <th style="width:200px;" class="text-end">Aksi</th>
@@ -136,7 +136,7 @@
                                     @foreach (var j in Model)
                                     {
                                         <tr data-id="@j.Id" data-nama="@j.Nama" data-interval="@j.IntervalPemeriksaanBulan">
-                                            <td>@j.Id</td>
+                                            @* <td>@j.Id</td> *@
                                             <td><span class="badge bg-info text-dark">@j.Nama</span></td>
                                             <td><span class="badge bg-warning text-dark">@j.IntervalPemeriksaanBulan</span></td>
                                             <td class="text-end">

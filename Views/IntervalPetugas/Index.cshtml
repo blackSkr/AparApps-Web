@@ -110,7 +110,7 @@
                             <table id="intervalTable" class="table table-hover align-middle mb-0">
                                 <thead class="table-light sticky-head">
                                     <tr>
-                                        <th style="width:80px;">ID</th>
+                                        @* <th style="width:80px;">ID</th> *@
                                         <th>Nama Interval</th>
                                         <th style="width:140px;">Bulan</th>
                                         <th style="width:240px;">Deskripsi</th>
@@ -121,7 +121,7 @@
                                     @foreach (var x in Model)
                                     {
                                         <tr data-nama="@(x.NamaInterval ?? "")" data-desc="@(x.Deskripsi ?? "")">
-                                            <td>@x.Id</td>
+                                            @* <td>@x.Id</td> *@
                                             <td class="fw-semibold">@x.NamaInterval</td>
                                             <td>
                                                 <span class="badge bg-warning text-dark">

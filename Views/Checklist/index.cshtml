@@ -80,7 +80,7 @@
                                     <table class="table table-sm table-hover">
                                         <thead class="table-light">
                                             <tr>
-                                                <th width="80">ID</th>
+                                                @* <th width="80">ID</th> *@
                                                 <th>Pertanyaan Checklist</th>
                                                 <th width="150">Aksi</th>
                                             </tr>
@@ -89,7 +89,7 @@
                                             @foreach (var item in jenisGroup.OrderBy(c => c.Id))
                                             {
                                                 <tr class="checklist-row" data-question="@item.Pertanyaan.ToLower()">
-                                                    <td>@item.Id</td>
+                                                    @* <td>@item.Id</td> *@
                                                     <td>@item.Pertanyaan</td>
                                                     <td>
                                                         <div class="btn-group" role="group">

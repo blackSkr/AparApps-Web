@@ -319,9 +319,9 @@
                                 <thead class="table-light sticky-head">
                                     <tr>
                                         <th scope="col">
-                                            <a class="@(sIdAct ? "sort-active" : "")" href="@sIdUrl">
+                                            @* <a class="@(sIdAct ? "sort-active" : "")" href="@sIdUrl">
                                                 ID <span class="sort-caret">@(sIdAct? caret : "↕")</span>
-                                            </a>
+                                            </a> *@
                                         </th>
                                         <th scope="col">
                                             <a class="@(sNamaAct ? "sort-active" : "")" href="@sNamaUrl">
@@ -350,7 +350,7 @@
                                     @foreach (var e in items)
                                     {
                                         <tr>
-                                            <td>@e.Id</td>
+                                            @* <td>@e.Id</td> *@
                                             <td>@(string.IsNullOrWhiteSpace(e.Nama) ? "-" : e.Nama)</td>
                                             <td><span class="badge bg-primary">@e.BadgeNumber</span></td>
                                             <td>@(string.IsNullOrWhiteSpace(e.Divisi) ? "-" : e.Divisi)</td>
