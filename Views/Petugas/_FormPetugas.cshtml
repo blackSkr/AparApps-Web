@@ -5,8 +5,9 @@
 
 <div class="mb-3">
     <label asp-for="EmployeeId" class="form-label">Employee</label>
-    <input type="text" id="employeeSearch" class="form-control mb-2" placeholder="Ketik nama atau badge..."
-        autocomplete="off" disabled />
+    <input type="text" id="employeeSearch" class="form-control mb-2" placeholder="Nama / Badge Number"
+        autocomplete="off" />
+
     <select asp-for="EmployeeId" class="form-select" id="employeeSelect">
         <option value="">-- Pilih employee --</option>
     </select>
@@ -24,3 +25,38 @@
     </select>
     <span asp-validation-for="RolePetugasId" class="text-danger"></span>
 </div>
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchBox = document.getElementById("employeeSearch");
+            const selectBox = document.getElementById("employeeSelect");
+
+            let timeout = null;
+
+            searchBox.addEventListener("input", function () {
+                const q = this.value.trim();
+                clearTimeout(timeout);
+
+                if (q.length < 2) {
+                    selectBox.innerHTML = '<option value="">-- Pilih employee --</option>';
+                    return;
+                }
+
+                timeout = setTimeout(() => {
+                    fetch(`/Petugas/EmployeeLookup?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            selectBox.innerHTML = '<option value="">-- Pilih employee --</option>';
+                            data.forEach(e => {
+                                const opt = document.createElement("option");
+                                opt.value = e.id;
+                                opt.textContent = e.text;
+                                selectBox.appendChild(opt);
+                            });
+                        })
+                        .catch(err => console.error("Lookup error", err));
+                }, 300); // debounce 300ms
+            });
+        });
+    </script>
+}

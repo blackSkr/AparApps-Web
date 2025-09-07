@@ -149,7 +149,7 @@
                 <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div>
                         <h3 class="card-title mb-0">Daftar Employee</h3>
-                        <div class="small text-muted">Pencarian, sortir, dan pagination di server.</div>
+                        <div class="small text-muted">Pencarian, sortir, dan menampilkan data Employee / Pegawai.</div>
                     </div>
 
                     <div class="toolbar d-flex flex-wrap align-items-end gap-2">
@@ -361,11 +361,11 @@
                                                         href="@Url.Action("Details", new { id = e.Id })" title="Detail">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a class="btn btn-sm btn-warning"
+                                                    <a class="btn btn-sm btn-outline-warning"
                                                         href="@Url.Action("Edit", new { id = e.Id })" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <button type="button" class="btn btn-sm btn-danger"
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
                                                         onclick="confirmDelete(@e.Id, '@(e.Nama ?? e.BadgeNumber)')"
                                                         title="Hapus">
                                                         <i class="fas fa-trash"></i>

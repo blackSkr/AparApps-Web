@@ -6,19 +6,19 @@
     ViewData["Title"] = "Petugas";
 
     // --- Data dropdown aman-null ---
-    var roles  = ViewBag.Roles  as List<RoleItem>   ?? new();
+    var roles = ViewBag.Roles as List<RoleItem> ?? new();
     var lokasi = ViewBag.Lokasi as List<LokasiItem> ?? new();
 
     // --- Query dari controller ---
-    string q        = ViewBag.Query   as string ?? "";
-    string roleIdQ  = ViewBag.RoleId  != null ? ViewBag.RoleId.ToString()  : "";
-    string lokasiIdQ= ViewBag.LokasiId!= null ? ViewBag.LokasiId.ToString() : "";
+    string q = ViewBag.Query as string ?? "";
+    string roleIdQ = ViewBag.RoleId != null ? ViewBag.RoleId.ToString() : "";
+    string lokasiIdQ = ViewBag.LokasiId != null ? ViewBag.LokasiId.ToString() : "";
 
     // --- Sorting (selaras Peralatan) ---
-    string sortBy  = ViewBag.SortBy  as string ?? "Badge"; // Badge|Nama|Role|Lokasi
-    string sortDir = ViewBag.SortDir as string ?? "ASC";   // ASC|DESC
+    string sortBy = ViewBag.SortBy as string ?? "Badge"; // Badge|Nama|Role|Lokasi
+    string sortDir = ViewBag.SortDir as string ?? "ASC"; // ASC|DESC
 
-    int curPage  = ViewBag.Page     ?? 1;
+    int curPage = ViewBag.Page ?? 1;
     int pageSize = ViewBag.PageSize ?? 20;
 
     // --- TOTAL dari Controller; fallback ke jumlah item Model ---
@@ -26,27 +26,29 @@
 
     // --- Paging helper ---
     int totalPages = (int)Math.Ceiling(total / Math.Max(1.0, pageSize));
-    int safeCur    = Math.Max(1, Math.Min(Math.Max(1, totalPages), curPage));
-    int startIdx   = total == 0 ? 0 : (safeCur - 1) * pageSize + 1;
-    int endIdx     = Math.Min(safeCur * pageSize, total);
-    int left       = Math.Max(1, safeCur - 2);
-    int right      = Math.Min(totalPages, safeCur + 2);
+    int safeCur = Math.Max(1, Math.Min(Math.Max(1, totalPages), curPage));
+    int startIdx = total == 0 ? 0 : (safeCur - 1) * pageSize + 1;
+    int endIdx = Math.Min(safeCur * pageSize, total);
+    int left = Math.Max(1, safeCur - 2);
+    int right = Math.Min(totalPages, safeCur + 2);
 
     // --- Toggle dir & flags caret ---
     Func<string, string> ToggleDir = (col) =>
-        (string.Equals(sortBy, col, StringComparison.OrdinalIgnoreCase) && sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase))
-        ? "DESC" : "ASC";
+    (string.Equals(sortBy, col, StringComparison.OrdinalIgnoreCase) && sortDir.Equals("ASC",
+    StringComparison.OrdinalIgnoreCase))
+    ? "DESC" : "ASC";
 
-    bool sBadge = sortBy.Equals("Badge",  StringComparison.OrdinalIgnoreCase);
-    bool sNama  = sortBy.Equals("Nama",   StringComparison.OrdinalIgnoreCase);
-    bool sRole  = sortBy.Equals("Role",   StringComparison.OrdinalIgnoreCase);
-    bool sLok   = sortBy.Equals("Lokasi", StringComparison.OrdinalIgnoreCase);
-    string caret= sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase) ? "↑" : "↓";
+    bool sBadge = sortBy.Equals("Badge", StringComparison.OrdinalIgnoreCase);
+    bool sNama = sortBy.Equals("Nama", StringComparison.OrdinalIgnoreCase);
+    bool sRole = sortBy.Equals("Role", StringComparison.OrdinalIgnoreCase);
+    bool sLok = sortBy.Equals("Lokasi", StringComparison.OrdinalIgnoreCase);
+    string caret = sortDir.Equals("ASC", StringComparison.OrdinalIgnoreCase) ? "↑" : "↓";
 
-    object commonRoute(int page) => new {
+    object commonRoute(int page) => new
+    {
         q,
-        roleId  = roleIdQ,
-        lokasiId= lokasiIdQ,
+        roleId = roleIdQ,
+        lokasiId = lokasiIdQ,
         page,
         pageSize,
         sortBy,
@@ -54,40 +56,132 @@
     };
 
     // --- Sorting URLs (reset ke page 1) ---
-    string sBadgeUrl = Url.Action("Index", new { q, roleId = roleIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Badge",  sortDir = ToggleDir("Badge")  }) ?? "#";
-    string sNamaUrl  = Url.Action("Index", new { q, roleId = roleIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Nama",   sortDir = ToggleDir("Nama")   }) ?? "#";
-    string sRoleUrl  = Url.Action("Index", new { q, roleId = roleIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Role",   sortDir = ToggleDir("Role")   }) ?? "#";
-    string sLokUrl   = Url.Action("Index", new { q, roleId = roleIdQ, lokasiId = lokasiIdQ, page = 1, pageSize, sortBy = "Lokasi", sortDir = ToggleDir("Lokasi") }) ?? "#";
+    string sBadgeUrl = Url.Action("Index", new
+    {
+        q,
+        roleId = roleIdQ,
+        lokasiId = lokasiIdQ,
+        page = 1,
+        pageSize,
+        sortBy =
+    "Badge",
+        sortDir = ToggleDir("Badge")
+    }) ?? "#";
+    string sNamaUrl = Url.Action("Index", new
+    {
+        q,
+        roleId = roleIdQ,
+        lokasiId = lokasiIdQ,
+        page = 1,
+        pageSize,
+        sortBy =
+    "Nama",
+        sortDir = ToggleDir("Nama")
+    }) ?? "#";
+    string sRoleUrl = Url.Action("Index", new
+    {
+        q,
+        roleId = roleIdQ,
+        lokasiId = lokasiIdQ,
+        page = 1,
+        pageSize,
+        sortBy =
+    "Role",
+        sortDir = ToggleDir("Role")
+    }) ?? "#";
+    string sLokUrl = Url.Action("Index", new
+    {
+        q,
+        roleId = roleIdQ,
+        lokasiId = lokasiIdQ,
+        page = 1,
+        pageSize,
+        sortBy =
+    "Lokasi",
+        sortDir = ToggleDir("Lokasi")
+    }) ?? "#";
 
     // --- Prev/Next URL ---
-string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "#";
+    string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "#";
     string nextUrl = Url.Action("Index", commonRoute(Math.Min(Math.Max(1, totalPages), safeCur + 1))) ?? "#";
 
     // Helper URL nomor halaman
     Func<int, string> pg = (int p) => Url.Action("Index", commonRoute(p)) ?? "#";
 
     // Helper label chip
-    string roleNamaTerpilih  = !string.IsNullOrWhiteSpace(roleIdQ)  ? (roles.FirstOrDefault(r => r.Id.ToString() == roleIdQ)?.Display ?? "Tidak diketahui") : "";
-    string lokasiNamaTerpilih= !string.IsNullOrWhiteSpace(lokasiIdQ)? (lokasi.FirstOrDefault(l => l.Id.ToString() == lokasiIdQ)?.Nama   ?? "Tidak diketahui") : "";
+    string roleNamaTerpilih = !string.IsNullOrWhiteSpace(roleIdQ) ? (roles.FirstOrDefault(r => r.Id.ToString() ==
+    roleIdQ)?.Display ?? "Tidak diketahui") : "";
+    string lokasiNamaTerpilih = !string.IsNullOrWhiteSpace(lokasiIdQ) ? (lokasi.FirstOrDefault(l => l.Id.ToString() ==
+    lokasiIdQ)?.Nama ?? "Tidak diketahui") : "";
 }
 
 <style>
-    .toolbar .form-control, .toolbar .form-select { min-width: 180px; }
-    .toolbar .btn { border-radius: .45rem; }
-    .k-chip { font-size: .8rem; border: 1px solid rgba(0,0,0,.06); background: var(--bs-light); }
-    .sticky-head th { position: sticky; top: 0; z-index: 2; background: var(--bs-body-bg); }
-    .table thead th { white-space: nowrap; }
-    .table-hover tbody tr:hover { filter: brightness(.98); }
-    .table thead th a { text-decoration: none; display: inline-flex; align-items: center; gap: .35rem; }
-    .sort-caret { opacity: .55; }
-    .sort-active .sort-caret { opacity: 1; }
-    .kode-badge { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .toolbar .form-control,
+    .toolbar .form-select {
+        min-width: 180px;
+    }
+
+    .toolbar .btn {
+        border-radius: .45rem;
+    }
+
+    .k-chip {
+        font-size: .8rem;
+        border: 1px solid rgba(0, 0, 0, .06);
+        background: var(--bs-light);
+    }
+
+    .sticky-head th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: var(--bs-body-bg);
+    }
+
+    .table thead th {
+        white-space: nowrap;
+    }
+
+    .table-hover tbody tr:hover {
+        filter: brightness(.98);
+    }
+
+    .table thead th a {
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    .sort-caret {
+        opacity: .55;
+    }
+
+    .sort-active .sort-caret {
+        opacity: 1;
+    }
+
+    .kode-badge {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
     /* Aksi: inline di desktop, dropdown di mobile */
-    .action-inline { display: none; }
-    .action-dropdown { display: inline-block; }
+    .action-inline {
+        display: none;
+    }
+
+    .action-dropdown {
+        display: inline-block;
+    }
+
     @@media (min-width: 768px) {
-        .action-inline { display: inline-flex; }
-        .action-dropdown { display: none; }
+        .action-inline {
+            display: inline-flex;
+        }
+
+        .action-dropdown {
+            display: none;
+        }
     }
 </style>
 
@@ -107,18 +201,19 @@ string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "
                 <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div>
                         <h3 class="card-title mb-0">Petugas</h3>
-                        <div class="small text-muted">Pencarian, filter, sortir, dan pagination di server.</div>
+                        <div class="small text-muted">Pencarian, filter, sortir data petugas.</div>
                     </div>
 
                     <div class="toolbar d-flex flex-wrap align-items-end gap-2">
                         <form method="get" class="d-flex flex-wrap align-items-end gap-2">
                             <input type="hidden" name="sortBy" value="@sortBy" />
                             <input type="hidden" name="sortDir" value="@sortDir" />
-                            <input type="hidden" name="page"    value="1" />
+                            <input type="hidden" name="page" value="1" />
 
                             <div>
                                 <label class="form-label small text-muted">Pencarian</label>
-                                <input class="form-control" name="q" value="@q" placeholder="Cari nama / badge / role" />
+                                <input class="form-control" name="q" value="@q"
+                                    placeholder="Cari nama / badge / role" />
                             </div>
 
                             <div>
@@ -128,9 +223,14 @@ string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "
                                     @foreach (var r in roles)
                                     {
                                         if (roleIdQ == r.Id.ToString())
-                                        { <option value="@r.Id" selected>@r.Display</option> }
+                                        {
+                                            <option value="@r.Id" selected>@r.Display</option>
+                                        }
                                         else
-                                        { <option value="@r.Id">@r.Display</option> }
+                                        {
+
+                                            <option value="@r.Id">@r.Display</option>
+                                        }
                                     }
                                 </select>
                             </div>
@@ -142,9 +242,14 @@ string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "
                                     @foreach (var l in lokasi)
                                     {
                                         if (lokasiIdQ == l.Id.ToString())
-                                        { <option value="@l.Id" selected>@l.Nama</option> }
+                                        {
+                                            <option value="@l.Id" selected>@l.Nama</option>
+                                        }
                                         else
-                                        { <option value="@l.Id">@l.Nama</option> }
+                                        {
+
+                                            <option value="@l.Id">@l.Nama</option>
+                                        }
                                     }
                                 </select>
                             </div>
@@ -152,10 +257,42 @@ string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "
                             <div>
                                 <label class="form-label small text-muted">Per halaman</label>
                                 <select class="form-select" name="pageSize" onchange="this.form.submit()">
-                                    @if (pageSize == 10)   { <option value="10" selected>10</option> }   else { <option value="10">10</option> }
-                                    @if (pageSize == 20)   { <option value="20" selected>20</option> }   else { <option value="20">20</option> }
-                                    @if (pageSize == 50)   { <option value="50" selected>50</option> }   else { <option value="50">50</option> }
-                                    @if (pageSize == 100)  { <option value="100" selected>100</option> } else { <option value="100">100</option> }
+                                    @if (pageSize == 10)
+                                    {
+                                        <option value="10" selected>10</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="10">10</option>
+                                    }
+                                    @if (pageSize == 20)
+                                    {
+                                        <option value="20" selected>20</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="20">20</option>
+                                    }
+                                    @if (pageSize == 50)
+                                    {
+                                        <option value="50" selected>50</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="50">50</option>
+                                    }
+                                    @if (pageSize == 100)
+                                    {
+                                        <option value="100" selected>100</option>
+                                    }
+                                    else
+                                    {
+
+                                        <option value="100">100</option>
+                                    }
                                 </select>
                             </div>
 
@@ -180,13 +317,22 @@ string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "
                     {
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
                             <div class="small text-muted">
-                                Menampilkan <strong>@startIdx</strong>-<strong>@endIdx</strong> dari <strong>@total</strong> data.
+                                Menampilkan <strong>@startIdx</strong>-<strong>@endIdx</strong> dari <strong>@total</strong>
+                                data.
                                 @if (!string.IsNullOrWhiteSpace(q))
-                                { <span class="badge k-chip ms-1"><i class="fas fa-search"></i> “@q”</span> }
+                                {
+                                    <span class="badge k-chip ms-1"><i class="fas fa-search"></i> “@q”</span>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(roleIdQ))
-                                { <span class="badge k-chip ms-1"><i class="fas fa-user-shield"></i> Role: @roleNamaTerpilih</span> }
+                                {
+                                    <span class="badge k-chip ms-1"><i class="fas fa-user-shield"></i> Role:
+                                        @roleNamaTerpilih</span>
+                                }
                                 @if (!string.IsNullOrWhiteSpace(lokasiIdQ))
-                                { <span class="badge k-chip ms-1"><i class="fas fa-map-marker-alt"></i> Lokasi: @lokasiNamaTerpilih</span> }
+                                {
+                                    <span class="badge k-chip ms-1"><i class="fas fa-map-marker-alt"></i> Lokasi:
+                                        @lokasiNamaTerpilih</span>
+                                }
                             </div>
                         </div>
 
@@ -196,67 +342,78 @@ string prevUrl = Url.Action("Index", commonRoute(Math.Max(1, safeCur - 1))) ?? "
                                     <tr>
                                         <th>
                                             <a class="@(sBadge ? "sort-active" : "")" href="@sBadgeUrl">
-                                                Badge <span class="sort-caret">@(sBadge ? caret : "↕")</span>
+                                                Badge <span class="sort-caret">@(sBadge? caret : "↕")</span>
                                             </a>
                                         </th>
                                         <th>
                                             <a class="@(sNama ? "sort-active" : "")" href="@sNamaUrl">
-                                                Nama <span class="sort-caret">@(sNama ? caret : "↕")</span>
+                                                Nama <span class="sort-caret">@(sNama? caret : "↕")</span>
                                             </a>
                                         </th>
                                         <th>
                                             <a class="@(sRole ? "sort-active" : "")" href="@sRoleUrl">
-                                                Role <span class="sort-caret">@(sRole ? caret : "↕")</span>
+                                                Role <span class="sort-caret">@(sRole? caret : "↕")</span>
                                             </a>
                                         </th>
                                         <th>
                                             <a class="@(sLok ? "sort-active" : "")" href="@sLokUrl">
-                                                Lokasi <span class="sort-caret">@(sLok ? caret : "↕")</span>
+                                                Lokasi <span class="sort-caret">@(sLok? caret : "↕")</span>
                                             </a>
                                         </th>
                                         <th class="text-end" style="width:170px;">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                @foreach (var x in Model.items)
-                                {
-                                    <tr>
-                                        <td><span class="badge bg-secondary kode-badge">@x.BadgeNumber</span></td>
-                                        <td>@(string.IsNullOrWhiteSpace(x.EmployeeNama) ? "-" : x.EmployeeNama)</td>
-                                        <td>@(string.IsNullOrWhiteSpace(x.RoleNama)     ? "-" : x.RoleNama)</td>
-                                        <td>@(string.IsNullOrWhiteSpace(x.LokasiNama)   ? "-" : x.LokasiNama)</td>
-                                        <td class="text-end">
-                                            <!-- Desktop -->
-                                            <div class="btn-group action-inline">
-                                                <a class="btn btn-sm btn-outline-secondary" asp-action="Details" asp-route-id="@x.Id" title="Detail">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@x.Id" title="Edit">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(@x.Id, '@(x.EmployeeNama ?? x.BadgeNumber)')" title="Hapus">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                            <!-- Mobile -->
-                                            <div class="dropdown action-dropdown">
-                                                <button class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    Aksi
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li><a class="dropdown-item" asp-action="Details" asp-route-id="@x.Id"><i class="fas fa-eye me-2"></i>Detail</a></li>
-                                                    <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@x.Id"><i class="fas fa-edit me-2"></i>Edit</a></li>
-                                                    <li><hr class="dropdown-divider" /></li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item text-danger" onclick="confirmDelete(@x.Id, '@(x.EmployeeNama ?? x.BadgeNumber)')">
-                                                            <i class="fas fa-trash me-2"></i>Hapus
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
+                                    @foreach (var x in Model.items)
+                                    {
+                                        <tr>
+                                            <td><span class="badge bg-secondary kode-badge">@x.BadgeNumber</span></td>
+                                            <td>@(string.IsNullOrWhiteSpace(x.EmployeeNama) ? "-" : x.EmployeeNama)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(x.RoleNama) ? "-" : x.RoleNama)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(x.LokasiNama) ? "-" : x.LokasiNama)</td>
+                                            <td class="text-end">
+                                                <!-- Desktop -->
+                                                <div class="btn-group action-inline">
+                                                    <a class="btn btn-sm btn-outline-secondary" asp-action="Details"
+                                                        asp-route-id="@x.Id" title="Detail">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <a class="btn btn-sm btn-outline-warning" asp-action="Edit"
+                                                        asp-route-id="@x.Id" title="Edit">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                        onclick="confirmDelete(@x.Id, '@(x.EmployeeNama ?? x.BadgeNumber)')"
+                                                        title="Hapus">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                                <!-- Mobile -->
+                                                <div class="dropdown action-dropdown">
+                                                    <button class="btn btn-sm btn-light border dropdown-toggle"
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                        Aksi
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li><a class="dropdown-item" asp-action="Details"
+                                                                asp-route-id="@x.Id"><i class="fas fa-eye me-2"></i>Detail</a>
+                                                        </li>
+                                                        <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@x.Id"><i
+                                                                    class="fas fa-edit me-2"></i>Edit</a></li>
+                                                        <li>
+                                                            <hr class="dropdown-divider" />
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item text-danger"
+                                                                onclick="confirmDelete(@x.Id, '@(x.EmployeeNama ?? x.BadgeNumber)')">
+                                                                <i class="fas fa-trash me-2"></i>Hapus
+                                                            </button>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
                                 </tbody>
                             </table>
                         </div>

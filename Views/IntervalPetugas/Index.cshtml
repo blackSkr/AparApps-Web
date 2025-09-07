@@ -69,9 +69,9 @@
 
                         <!-- Toolbar kanan: tombol aksi utama -->
                         <div class="d-flex flex-wrap align-items-center gap-2">
-                            <button id="btnExport" class="btn btn-outline-secondary">
+                            @* <button id="btnExport" class="btn btn-outline-secondary">
                                 <i class="fas fa-file-export"></i> Export CSV
-                            </button>
+                            </button> *@
                             <a class="btn btn-primary" href="@Url.Action("Create")">
                                 <i class="fas fa-plus"></i> Tambah
                             </a>
@@ -136,11 +136,11 @@
                                                         href="@Url.Action("Details", new { id = x.Id })" title="Detail">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a class="btn btn-sm btn-warning"
+                                                    <a class="btn btn-sm btn-outline-warning"
                                                         href="@Url.Action("Edit", new { id = x.Id })" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    <button type="button" class="btn btn-sm btn-danger"
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
                                                         onclick="confirmDelete(@x.Id, '@x.NamaInterval')" title="Hapus">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
