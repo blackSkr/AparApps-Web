@@ -150,8 +150,8 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXEVkaXQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/AparAppsWebsite/Views/Peralatan/Expired.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXEV4cGlyZWQuY3NodG1s
+[D:/AparAppsWebsite/Views/Peralatan/History.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcUGVyYWxhdGFuXEhpc3RvcnkuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/AparAppsWebsite/Views/Peralatan/index.cshtml]

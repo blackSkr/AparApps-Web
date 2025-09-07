@@ -1,7 +1,7 @@
 @model List<AparAppsWebsite.Models.Peralatan>
 @using System
 @{
-    ViewData["Title"] = "Peralatan Expired";
+    ViewData["Title"] = "Riwayat Peralatan";
     var apiBase = (string?)ViewBag.ApiBase ?? "";
     var jenisFilter = ViewBag.FilterJenis as List<AparAppsWebsite.Models.DropdownItem> ?? new();
     var lokasiFilter = ViewBag.FilterLokasi as List<AparAppsWebsite.Models.DropdownItem> ?? new();
@@ -154,9 +154,9 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <div>
-                        <h3 class="card-title mb-0">Peralatan <span class="badge bg-dark">Expired</span></h3>
-                        <div class="small text-muted">Menampilkan hanya peralatan yang sudah <b>Exp</b> atau <b>Exp.
-                                Date</b> lewat hari ini.</div>
+                        <h3 class="card-title mb-0">Riwayat Peralatan <span class="badge bg-dark"></span></h3>
+                        @* <div class="small text-muted">Menampilkan hanya peralatan yang sudah <b>Exp</b> atau <b>Exp.
+                                Date</b> lewat hari ini.</div> *@
                     </div>
 
                     <form method="get" class="d-flex flex-wrap align-items-end gap-2">
@@ -235,7 +235,7 @@
                                                     class="text-muted">@(sJenAct? caret : "↕")</span></a></th>
                                         <th><a class="@(sStaAct ? "fw-semibold" : "")" href="@sStaUrl">Status <span
                                                     class="text-muted">@(sStaAct? caret : "↕")</span></a></th>
-                                        <th><a class="@(sExpAct ? "fw-semibold" : "")" href="@sExpUrl">Exp. Date <span
+                                        <th><a class="@(sExpAct ? "fw-semibold" : "")" href="@sExpUrl">Tanggal Expired <span
                                                     class="text-muted">@(sExpAct? caret : "↕")</span></a></th>
                                         <th><a class="@(sUpdAct ? "fw-semibold" : "")" href="@sUpdUrl">Tanggal Update <span
                                                     class="text-muted">@(sUpdAct? caret : "↕")</span></a></th>
@@ -272,16 +272,16 @@
                                             <td class="small">@(!string.IsNullOrWhiteSpace(x.Keterangan) ? x.Keterangan : "-")
                                             </td>
                                             <td>@if (!string.IsNullOrWhiteSpace(foto)) {
-                                            <img src="@foto" class="thumb" />
-                                        }
+                                                <img src="@foto" class="thumb" />
+                                            }
                                         </td>
                                         <td class="text-end">
                                             <div class="btn-group">
                                                 <a class="btn btn-sm btn-outline-secondary" asp-action="Details"
                                                     asp-route-id="@x.Id" title="Detail"><i class="fas fa-eye"></i></a>
                                                 @* <a class="btn btn-sm btn-warning" asp-action="Edit" asp-route-id="@x.Id" title="Edit"><i class="fas fa-edit"></i></a> *@
-                                                <a class="btn btn-sm btn-info" asp-action="QR" asp-route-id="@x.Id"
-                                                    title="QR"><i class="fas fa-qrcode"></i></a>
+                                                @* <a class="btn btn-sm btn-info" asp-action="QR" asp-route-id="@x.Id"
+                                                    title="QR"><i class="fas fa-qrcode"></i></a> *@
                                             </div>
                                         </td>
                                     </tr>
@@ -310,7 +310,7 @@
                                         }
                                         else
                     {
-                        <div class="alert alert-info">Tidak ada peralatan expired.</div>
+                        <div class="alert alert-info">Tidak ada Riwayat Peralatan.</div>
                     }
                 </div>
             </div>

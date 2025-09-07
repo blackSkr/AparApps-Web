@@ -58,14 +58,12 @@ namespace AparWebAdmin.Controllers
                     x.Keterangan = x.Keterangan?.Trim();
                 }
 
-                // hanya yang BELUM expired
-                bool NotExpired(Peralatan p)
-                {
-                    var byStatus = !string.Equals(p.Status ?? "", "Exp", StringComparison.OrdinalIgnoreCase);
-                    var byDate = !p.Exp_Date.HasValue || p.Exp_Date.Value.Date >= DateTime.Today;
-                    return byStatus && byDate;
-                }
-                var data = all.Where(NotExpired).ToList();
+                // hanya tampilkan alat yang statusnya bukan Exp, Rusak, atau Hapus
+                var data = all
+                    .Where(p => !string.Equals(p.Status, "Exp", StringComparison.OrdinalIgnoreCase) &&
+                                !string.Equals(p.Status, "Rusak", StringComparison.OrdinalIgnoreCase) &&
+                                !string.Equals(p.Status, "Hapus", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
                 // search/filter
                 if (!string.IsNullOrWhiteSpace(q))
@@ -126,11 +124,11 @@ namespace AparWebAdmin.Controllers
         }
 
         // ==========================
-        // LIST EXPIRED (server-side)
+        // LIST HISTORY (server-side)
         // ==========================
-        [HttpGet("Expired")]
+        [HttpGet("History")]
         [Authorize(Roles = "AdminWeb,Rescue")]
-        public async Task<IActionResult> Expired(
+        public async Task<IActionResult> History(
             string? q,
             int? jenisId,
             int? lokasiId,
@@ -143,12 +141,11 @@ namespace AparWebAdmin.Controllers
             {
                 SetApiBase();
 
-                // Pakai filter dari API Node (lebih hemat), fallback nanti kita filter lagi di sini
-                var resp = await _httpClient.GetAsync("api/peralatan/admin?onlyExp=1");
+                var resp = await _httpClient.GetAsync("api/peralatan/admin");
                 if (!resp.IsSuccessStatusCode)
                 {
-                    ViewBag.Error = await ReadApiErrorAsync(resp, "Gagal memuat data peralatan Exp");
-                    return View("Expired", new List<Peralatan>());
+                    ViewBag.Error = await ReadApiErrorAsync(resp, "Gagal memuat data history peralatan");
+                    return View("History", new List<Peralatan>());
                 }
 
                 var json = await resp.Content.ReadAsStringAsync();
@@ -160,19 +157,17 @@ namespace AparWebAdmin.Controllers
                     x.Kode = x.Kode?.Trim();
                     x.JenisNama = x.JenisNama?.Trim();
                     x.LokasiNama = x.LokasiNama?.Trim();
-                    x.DetailNamaLokasi = x.DetailNamaLokasi?.Trim(); // ✅
+                    x.DetailNamaLokasi = x.DetailNamaLokasi?.Trim();
                     x.Status = x.Status?.Trim();
                     x.Keterangan = x.Keterangan?.Trim();
                 }
 
-                // backup filter di sisi .NET (kalau Node belum diupdate)
-                bool IsExpired(Peralatan p)
-                {
-                    bool byStatus = string.Equals(p.Status ?? "", "Exp", StringComparison.OrdinalIgnoreCase);
-                    bool byDate = p.Exp_Date.HasValue && p.Exp_Date.Value.Date < DateTime.Today;
-                    return byStatus || byDate;
-                }
-                var data = all.Where(IsExpired).ToList();
+                // ambil semua yang SUDAH punya status Exp, Rusak, Hapus
+                var data = all.Where(p =>
+                    string.Equals(p.Status, "Exp", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(p.Status, "Rusak", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(p.Status, "Hapus", StringComparison.OrdinalIgnoreCase)
+                ).ToList();
 
                 // search + filter
                 if (!string.IsNullOrWhiteSpace(q))
@@ -181,7 +176,7 @@ namespace AparWebAdmin.Controllers
                     data = data.Where(x =>
                         (x.Kode ?? "").ToLower().Contains(key) ||
                         (x.LokasiNama ?? "").ToLower().Contains(key) ||
-                        (x.DetailNamaLokasi ?? "").ToLower().Contains(key) || // ✅
+                        (x.DetailNamaLokasi ?? "").ToLower().Contains(key) ||
                         (x.JenisNama ?? "").ToLower().Contains(key) ||
                         (x.Spesifikasi ?? "").ToLower().Contains(key) ||
                         (x.Keterangan ?? "").ToLower().Contains(key) ||
@@ -196,7 +191,7 @@ namespace AparWebAdmin.Controllers
                 data = (sortBy?.ToLowerInvariant()) switch
                 {
                     "lokasi" => (asc ? data.OrderBy(x => x.LokasiNama).ThenBy(x => x.DetailNamaLokasi)
-                                     : data.OrderByDescending(x => x.LokasiNama).ThenByDescending(x => x.DetailNamaLokasi)).ToList(), // ✅
+                                     : data.OrderByDescending(x => x.LokasiNama).ThenByDescending(x => x.DetailNamaLokasi)).ToList(),
                     "jenis" => (asc ? data.OrderBy(x => x.JenisNama) : data.OrderByDescending(x => x.JenisNama)).ToList(),
                     "status" => (asc ? data.OrderBy(x => x.Status) : data.OrderByDescending(x => x.Status)).ToList(),
                     "exp_date" => (asc ? data.OrderBy(x => x.Exp_Date) : data.OrderByDescending(x => x.Exp_Date)).ToList(),
@@ -225,14 +220,15 @@ namespace AparWebAdmin.Controllers
                 ViewBag.PageSize = pageSize;
                 ViewBag.Total = total;
 
-                return View("Expired", paged);
+                return View("History", paged);
             }
             catch (Exception ex)
             {
                 ViewBag.Error = $"Error: {ex.Message}";
-                return View("Expired", new List<Peralatan>());
+                return View("History", new List<Peralatan>());
             }
         }
+
 
         // =============
         // CREATE (GET)
@@ -394,11 +390,11 @@ namespace AparWebAdmin.Controllers
         }
 
         // ============================
-        // MARK AS EXPIRED (DangerZone)
+        // MARK STATUS (DangerZone)
         // ============================
         [HttpPost("MarkExpired"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
-        public async Task<IActionResult> MarkExpired(int id, string reason)
+        public async Task<IActionResult> MarkExpired(int id, string status, string reason)
         {
             try
             {
@@ -417,17 +413,17 @@ namespace AparWebAdmin.Controllers
                 form.Add(new StringContent(alat.LokasiId.ToString()), "LokasiId");
                 form.Add(new StringContent(alat.Spesifikasi ?? ""), "Spesifikasi");
                 form.Add(new StringContent((alat.Exp_Date ?? DateTime.Today).ToString("yyyy-MM-dd")), "exp_date");
-                form.Add(new StringContent("Exp"), "status");
+                form.Add(new StringContent(status), "status");
                 form.Add(new StringContent(reason ?? ""), "keterangan");
 
                 var resp = await _httpClient.PutAsync($"api/peralatan/admin/{id}", form);
                 if (!resp.IsSuccessStatusCode)
                 {
-                    TempData["Error"] = await ReadApiErrorAsync(resp, "Gagal menandai sebagai Exp");
+                    TempData["Error"] = await ReadApiErrorAsync(resp, "Gagal update status");
                     return RedirectToAction(nameof(Edit), new { id });
                 }
 
-                TempData["Success"] = "Status peralatan diubah menjadi Exp dan timestamp diperbarui.";
+                TempData["Success"] = $"Status peralatan diubah menjadi {status} dan timestamp diperbarui.";
                 return RedirectToAction(nameof(Edit), new { id });
             }
             catch (Exception ex)
@@ -500,7 +496,7 @@ namespace AparWebAdmin.Controllers
         [HttpPost("Delete/{id:int}"), ValidateAntiForgeryToken]
         [Authorize(Roles = "AdminWeb")]
         public Task<IActionResult> Delete(int id, string? reason)
-            => MarkExpired(id, reason ?? "Ditandai Exp via daftar peralatan");
+            => MarkExpired(id, "Hapus", reason ?? "Ditandai Hapus via daftar peralatan");
 
         // =========
         // QR & VIEW

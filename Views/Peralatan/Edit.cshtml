@@ -35,29 +35,32 @@
 <div class="card border-danger mt-4">
   <div class="card-header bg-danger text-white"><strong>Danger Zone</strong></div>
   <div class="card-body">
-    <p class="mb-3">Tindakan ini <strong>tidak menghapus</strong> data, tetapi menandai peralatan sebagai
-      <span class="badge bg-dark">Exp</span>. Tanggal update akan otomatis diisi dari server.
+    <p class="mb-3">Tindakan ini <strong>tidak menghapus</strong> data, tetapi menandai peralatan dengan status
+      tertentu.
+      Tanggal update akan otomatis diisi dari server.
     </p>
 
-    <form asp-action="MarkExpired" method="post" class="row g-2" onsubmit="return confirm('Tandai sebagai Exp?');">
+    <form asp-action="MarkExpired" method="post" class="row g-2" onsubmit="return confirm('Rubah Status Alat?');">
       @Html.AntiForgeryToken()
       <input type="hidden" name="id" value="@Model.Id" />
 
       <div class="col-md-3">
         <label class="form-label">Status</label>
-        <select class="form-select" disabled>
-          <option selected>Exp</option>
+        <select class="form-select" name="status">
+          <option value="Exp" selected>Exp</option>
+          <option value="Rusak">Rusak</option>
+          <option value="Hapus">Hapus</option>
         </select>
         <div class="form-text">Status yang akan diset.</div>
       </div>
 
       <div class="col-md-9">
         <label class="form-label">Keterangan <span class="text-danger">*</span></label>
-        <input name="reason" class="form-control" placeholder="Wajib diisi (alasan ditandai Exp)" required />
+        <input name="reason" class="form-control" placeholder="Wajib diisi (alasan perubahan status)" required />
       </div>
 
       <div class="col-12 mt-2">
-        <button class="btn btn-danger"><i class="fas fa-exclamation-triangle me-1"></i> Mark as Expired</button>
+        <button class="btn btn-danger"><i class="fas fa-exclamation-triangle me-1"></i> Update Status</button>
       </div>
     </form>
   </div>
